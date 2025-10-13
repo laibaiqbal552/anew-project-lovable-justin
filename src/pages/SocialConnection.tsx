@@ -117,8 +117,26 @@ const SocialConnection = () => {
   const checkUserAndBusiness = async () => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
+
+      // Check if we have registration data in localStorage (step 2 completed but not yet created account)
+      const registrationData = localStorage.getItem('registrationData');
+      const businessWebsiteUrl = localStorage.getItem('businessWebsiteUrl');
+      const businessName = localStorage.getItem('businessName');
+
       if (error || !user) {
-        console.log('No authenticated user, redirecting to home');
+        // Allow access if we have registration data (user is in the middle of the flow)
+        if (registrationData && businessWebsiteUrl && businessName) {
+          console.log('No authenticated user yet, but registration data found - allowing access');
+          // Create a temporary business ID for the flow
+          const tempBusinessId = `temp_${Date.now()}`;
+          localStorage.setItem('currentBusinessId', tempBusinessId);
+          setBusinessId(tempBusinessId);
+          setSiteUrl(businessWebsiteUrl);
+          setBizName(businessName);
+          return;
+        }
+
+        console.log('No authenticated user and no registration data, redirecting to home');
         navigate('/');
         return;
       }
@@ -653,7 +671,8 @@ const SocialConnection = () => {
     navigate('/setup');
   };
 
-  if (!user || !businessId) {
+  // Allow rendering if we have businessId (either from DB or temporary from registration flow)
+  if (!businessId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
