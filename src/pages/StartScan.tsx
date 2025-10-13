@@ -218,6 +218,43 @@ const StartScan = () => {
         localStorage.setItem('businessName', data.businessName);
         localStorage.removeItem('isGuestUser');
 
+        // Clean up temporary registration data
+        localStorage.removeItem('registrationData');
+        localStorage.removeItem('fromSocialMedia');
+
+        // Save social URLs from localStorage to database if they exist
+        const savedSocialUrls = localStorage.getItem('socialUrls');
+        if (savedSocialUrls) {
+          try {
+            const socialUrls = JSON.parse(savedSocialUrls);
+            console.log('Saving social URLs to database:', socialUrls);
+
+            // Insert each social account into the database
+            for (const [platform, url] of Object.entries(socialUrls)) {
+              if (url && typeof url === 'string' && url.trim() !== '') {
+                const { error: socialError } = await supabase
+                  .from('social_accounts')
+                  .insert({
+                    business_id: business.id,
+                    platform: platform,
+                    account_url: url.trim(),
+                    is_connected: false,
+                  });
+
+                if (socialError) {
+                  console.error(`Error saving ${platform} account:`, socialError);
+                }
+              }
+            }
+
+            // Clean up the temporary social URLs from localStorage
+            localStorage.removeItem('socialUrls');
+            console.log('Social URLs saved successfully and cleaned up from localStorage');
+          } catch (err) {
+            console.error('Error processing saved social URLs:', err);
+          }
+        }
+
         // Check if session exists (email confirmation disabled)
         if (authData.session) {
           toast.success('Account created! Starting your brand analysis...');

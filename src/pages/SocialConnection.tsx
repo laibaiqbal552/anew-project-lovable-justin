@@ -615,40 +615,51 @@ const SocialConnection = () => {
     setIsLoading(true);
 
     try {
-      // Save or update social accounts (manual insert-or-update without unique index)
-      for (const [platform, url] of Object.entries(socialUrls)) {
-        const trimmed = url.trim()
-        if (!trimmed) continue
+      // Check if this is a temporary business ID (user hasn't created account yet)
+      const isTemporaryBusiness = businessId.startsWith('temp_');
 
-        const { data: existing, error: fetchErr } = await supabase
-          .from('social_accounts')
-          .select('id')
-          .eq('business_id', businessId)
-          .eq('platform', platform)
-          .maybeSingle()
+      if (isTemporaryBusiness) {
+        // For temporary business (registration flow), just save to localStorage
+        console.log('Temporary business detected, saving social URLs to localStorage');
+        localStorage.setItem('socialUrls', JSON.stringify(socialUrls));
+        toast.success('Social media information saved!');
+      } else {
+        // For real business, save to database
+        for (const [platform, url] of Object.entries(socialUrls)) {
+          const trimmed = url.trim()
+          if (!trimmed) continue
 
-        if (fetchErr) throw fetchErr
-
-        if (existing) {
-          const { error: updateErr } = await supabase
+          const { data: existing, error: fetchErr } = await supabase
             .from('social_accounts')
-            .update({ account_url: trimmed, is_connected: false })
-            .eq('id', existing.id)
-          if (updateErr) throw updateErr
-        } else {
-          const { error: insertErr } = await supabase
-            .from('social_accounts')
-            .insert({
-              business_id: businessId,
-              platform,
-              account_url: trimmed,
-              is_connected: false,
-            })
-          if (insertErr) throw insertErr
+            .select('id')
+            .eq('business_id', businessId)
+            .eq('platform', platform)
+            .maybeSingle()
+
+          if (fetchErr) throw fetchErr
+
+          if (existing) {
+            const { error: updateErr } = await supabase
+              .from('social_accounts')
+              .update({ account_url: trimmed, is_connected: false })
+              .eq('id', existing.id)
+            if (updateErr) throw updateErr
+          } else {
+            const { error: insertErr } = await supabase
+              .from('social_accounts')
+              .insert({
+                business_id: businessId,
+                platform,
+                account_url: trimmed,
+                is_connected: false,
+              })
+            if (insertErr) throw insertErr
+          }
         }
+
+        toast.success('Social media accounts saved successfully!');
       }
 
-      toast.success('Social media accounts saved successfully!');
       // Set flag to indicate returning from social media step
       localStorage.setItem('fromSocialMedia', 'true');
       navigate('/start-scan');
