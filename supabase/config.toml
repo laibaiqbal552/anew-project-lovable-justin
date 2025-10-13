@@ -1,0 +1,38 @@
+project_id = "lovable-project"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[functions.analyze-website]
+verify_jwt = false
+
+[functions.analyze-social-media]
+verify_jwt = false
+
+[functions.analyze-reputation]
+verify_jwt = false
+
+[functions.analyze-google-analytics]
+verify_jwt = false
+
+[functions.auto-discover-ga4]
+verify_jwt = false
+
+[functions.enrich-with-perplexity]
+verify_jwt = false
+
+[functions.generate-score-breakdown]
+verify_jwt = false
+
+[functions.run-brand-analysis]
+verify_jwt = false
+
+[functions.test-analysis]
+verify_jwt = false
+
+[functions.generate-pdf-report]
+verify_jwt = false
