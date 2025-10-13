@@ -178,8 +178,8 @@ const BusinessSetup = () => {
             We need some basic information about your business to provide accurate brand equity analysis
           </p>
           <div className="mt-6">
-            <Progress value={33} className="w-full max-w-md mx-auto" />
-            <p className="text-sm text-gray-500 mt-2">Step 1 of 3</p>
+            <Progress value={40} className="w-full max-w-md mx-auto" />
+            <p className="text-sm text-gray-500 mt-2">Step 2 of 5</p>
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -75,6 +75,23 @@ const StartScan = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [skipAccount, setSkipAccount] = useState(false);
+  const [reviewData, setReviewData] = useState<ScanForm | null>(null);
+
+  // Check if returning from social media step
+  useEffect(() => {
+    const fromSocialMedia = localStorage.getItem('fromSocialMedia');
+    if (fromSocialMedia === 'true') {
+      // Load saved form data
+      const savedData = localStorage.getItem('registrationData');
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        form.reset(parsedData);
+        setReviewData(parsedData);
+        setStep(4); // Go directly to review step
+      }
+      localStorage.removeItem('fromSocialMedia');
+    }
+  }, []);
 
   const form = useForm<ScanForm>({
     resolver: zodResolver(scanSchema),
@@ -98,7 +115,7 @@ const StartScan = () => {
 
   const handleNext = async () => {
     setError(null);
-    
+
     // Validate current step
     if (step === 1) {
       if (skipAccount) {
@@ -109,10 +126,20 @@ const StartScan = () => {
       }
     } else if (step === 2) {
       const valid = await form.trigger([
-        'businessName', 'websiteUrl', 'industry', 
+        'businessName', 'websiteUrl', 'industry',
         'address', 'phone', 'description'
       ]);
-      if (valid) setStep(3);
+      if (valid) {
+        // Save form data to localStorage for later retrieval
+        const formData = form.getValues();
+        localStorage.setItem('registrationData', JSON.stringify(formData));
+        localStorage.setItem('businessWebsiteUrl', formData.websiteUrl);
+        localStorage.setItem('businessName', formData.businessName);
+
+        // Navigate to social media connection
+        toast.success('Information saved! Let\'s connect your social media.');
+        navigate('/connect');
+      }
     }
   };
 
@@ -135,7 +162,7 @@ const StartScan = () => {
         localStorage.setItem('isGuestUser', 'true');
 
         toast.success('Starting your brand analysis...');
-        navigate('/connect');
+        navigate('/analysis');
       } else {
         // Authenticated flow - create account and save to database
         const redirectUrl = `${window.location.origin}/`;
@@ -194,7 +221,7 @@ const StartScan = () => {
         // Check if session exists (email confirmation disabled)
         if (authData.session) {
           toast.success('Account created! Starting your brand analysis...');
-          navigate('/connect');
+          navigate('/analysis');
         } else {
           toast.success('Account created! Please check your email for a confirmation link.');
           setTimeout(() => navigate('/'), 2000);
@@ -208,7 +235,7 @@ const StartScan = () => {
     }
   };
 
-  const progressValue = step === 1 ? 33 : step === 2 ? 66 : 100;
+  const progressValue = step === 1 ? 20 : step === 2 ? 40 : step === 4 ? 80 : 60;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -224,11 +251,11 @@ const StartScan = () => {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             {step === 1 && "Let's start with your account details"}
             {step === 2 && "Tell us about your business"}
-            {step === 3 && "Review and launch your analysis"}
+            {step === 4 && "Review your information"}
           </p>
           <div className="mt-6">
             <Progress value={progressValue} className="w-full max-w-md mx-auto" />
-            <p className="text-sm text-gray-500 mt-2">Step {step} of 3</p>
+            <p className="text-sm text-gray-500 mt-2">Step {step === 4 ? '4' : step} of 5</p>
           </div>
         </div>
 
@@ -248,17 +275,17 @@ const StartScan = () => {
                   Business Information
                 </>
               )}
-              {step === 3 && (
+              {step === 4 && (
                 <>
                   <CheckCircle2 className="h-6 w-6 text-brand-600" />
-                  Ready to Launch
+                  Review Your Information
                 </>
               )}
             </CardTitle>
             <CardDescription>
               {step === 1 && "You'll use this email to access your brand reports"}
               {step === 2 && "We'll analyze your digital presence across multiple channels"}
-              {step === 3 && "Review your information and start your brand analysis"}
+              {step === 4 && "Please review your details before starting the analysis"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -512,24 +539,74 @@ const StartScan = () => {
                 </div>
               )}
 
-              {/* Step 3: Review and Submit */}
-              {step === 3 && (
+              {/* Step 4: Review Information */}
+              {step === 4 && reviewData && (
                 <div className="space-y-6 animate-fade-in">
+                  <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+                    <h3 className="font-semibold text-lg text-gray-900 mb-4">Review Your Information</h3>
+
+                    {!skipAccount && (
+                      <div className="pb-6 border-b border-gray-200">
+                        <h4 className="font-medium text-gray-900 mb-3">Account Details</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Full Name:</span>
+                            <p className="font-medium text-gray-900">{reviewData.fullName}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Email:</span>
+                            <p className="font-medium text-gray-900">{reviewData.email}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-3">Business Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Business Name:</span>
+                          <p className="font-medium text-gray-900">{reviewData.businessName}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Website:</span>
+                          <p className="font-medium text-gray-900 truncate">{reviewData.websiteUrl}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Industry:</span>
+                          <p className="font-medium text-gray-900">{reviewData.industry}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Phone:</span>
+                          <p className="font-medium text-gray-900">{reviewData.phone}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <span className="text-gray-500">Address:</span>
+                          <p className="font-medium text-gray-900">{reviewData.address}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <span className="text-gray-500">Description:</span>
+                          <p className="font-medium text-gray-900">{reviewData.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="bg-gradient-to-r from-brand-50 to-blue-50 p-6 rounded-lg space-y-4">
                     <h3 className="font-semibold text-lg text-gray-900">
-                      What happens next?
+                      Next Steps
                     </h3>
                     <ul className="space-y-3">
                       <li className="flex items-start gap-3">
                         <CheckCircle2 className="h-5 w-5 text-brand-600 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">
-                          We'll create your account and business profile
+                          Connect your social media accounts for deeper insights
                         </span>
                       </li>
                       <li className="flex items-start gap-3">
                         <CheckCircle2 className="h-5 w-5 text-brand-600 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">
-                          Analyze your website, social media, and online presence
+                          We'll analyze your website, social media, and online presence
                         </span>
                       </li>
                       <li className="flex items-start gap-3">
@@ -538,35 +615,7 @@ const StartScan = () => {
                           Generate your comprehensive brand equity score (0-100)
                         </span>
                       </li>
-                      <li className="flex items-start gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-brand-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">
-                          Provide actionable recommendations to improve your brand
-                        </span>
-                      </li>
                     </ul>
-                  </div>
-
-                  <div className="border border-gray-200 rounded-lg p-6 space-y-4">
-                    <h3 className="font-semibold text-gray-900">Your Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Name:</span>
-                        <p className="font-medium text-gray-900">{form.watch('fullName')}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Email:</span>
-                        <p className="font-medium text-gray-900">{form.watch('email')}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Business:</span>
-                        <p className="font-medium text-gray-900">{form.watch('businessName')}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Website:</span>
-                        <p className="font-medium text-gray-900 truncate">{form.watch('websiteUrl')}</p>
-                      </div>
-                    </div>
                   </div>
 
                   <div className="text-center text-sm text-gray-500">
@@ -603,7 +652,7 @@ const StartScan = () => {
                   </Button>
                 )}
 
-                {step < 3 ? (
+                {step < 4 ? (
                   <Button
                     type="button"
                     onClick={handleNext}
@@ -615,14 +664,15 @@ const StartScan = () => {
                   </Button>
                 ) : (
                   <Button
-                    type="submit"
+                    type="button"
+                    onClick={form.handleSubmit(handleSubmit)}
                     disabled={isLoading}
                     className="btn-primary flex items-center gap-2"
                   >
                     {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Creating Your Analysis...
+                        Creating Account...
                       </>
                     ) : (
                       <>

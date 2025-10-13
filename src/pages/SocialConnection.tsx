@@ -631,7 +631,9 @@ const SocialConnection = () => {
       }
 
       toast.success('Social media accounts saved successfully!');
-      navigate('/analysis');
+      // Set flag to indicate returning from social media step
+      localStorage.setItem('fromSocialMedia', 'true');
+      navigate('/start-scan');
 
     } catch (err: any) {
       console.error('Error saving social accounts:', err);
@@ -642,7 +644,9 @@ const SocialConnection = () => {
   };
 
   const handleSkip = () => {
-    navigate('/analysis');
+    // Set flag to indicate returning from social media step
+    localStorage.setItem('fromSocialMedia', 'true');
+    navigate('/start-scan');
   };
 
   const handleBack = () => {
@@ -672,8 +676,8 @@ const SocialConnection = () => {
             }
           </p>
           <div className="mt-6">
-            <Progress value={67} className="w-full max-w-md mx-auto" />
-            <p className="text-sm text-gray-500 mt-2">Step 2 of 3</p>
+            <Progress value={60} className="w-full max-w-md mx-auto" />
+            <p className="text-sm text-gray-500 mt-2">Step 3 of 5</p>
           </div>
           {isDetecting && (
             <div className="mt-4 flex items-center justify-center gap-2 text-blue-600">
@@ -977,7 +981,7 @@ const SocialConnection = () => {
                   </>
                 ) : (
                   <>
-                    Start Analysis
+                    Continue to Review
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

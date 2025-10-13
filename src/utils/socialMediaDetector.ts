@@ -123,14 +123,19 @@ export class SocialMediaDetector {
         }
       }
 
+      // Remove duplicates before enhancement
+      const deduplicatedProfiles = this.removeDuplicates(foundProfiles);
+
       // Method 2: Enhanced social profiles from discovered links
-      if (foundProfiles.length > 0) {
-        const enhancedFromWebsite = await this.enhanceFoundSocialProfiles(foundProfiles);
+      if (deduplicatedProfiles.length > 0) {
+        const enhancedFromWebsite = await this.enhanceFoundSocialProfiles(deduplicatedProfiles);
         foundProfiles.splice(0, foundProfiles.length, ...enhancedFromWebsite);
         detectionMethods.push('Social Profile Analysis');
+      } else {
+        foundProfiles.splice(0, foundProfiles.length);
       }
 
-      // Remove duplicates and calculate scores
+      // Remove duplicates again after enhancement (in case enhancement created duplicates)
       const uniqueProfiles = this.removeDuplicates(foundProfiles);
       const enhancedProfiles = await this.enhanceProfiles(uniqueProfiles);
       const totalScore = this.calculateOverallScore(enhancedProfiles, websiteQuality);
@@ -543,13 +548,32 @@ export class SocialMediaDetector {
   }
 
   private removeDuplicates(profiles: SocialMediaProfile[]): SocialMediaProfile[] {
-    const seen = new Set<string>();
-    return profiles.filter(profile => {
-      const key = `${profile.platform}-${profile.url}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+    const seen = new Map<string, SocialMediaProfile>();
+
+    profiles.forEach(profile => {
+      // Normalize URL for comparison (remove trailing slashes, query params, www, protocol differences)
+      const normalizedUrl = profile.url
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/$/, '')
+        .split('?')[0]
+        .split('#')[0];
+
+      const key = `${profile.platform}-${normalizedUrl}`;
+
+      // If this profile already exists, keep the one with better completeness
+      if (seen.has(key)) {
+        const existing = seen.get(key)!;
+        if ((profile.completeness || 0) > (existing.completeness || 0)) {
+          seen.set(key, profile);
+        }
+      } else {
+        seen.set(key, profile);
+      }
     });
+
+    return Array.from(seen.values());
   }
 
   private async enhanceProfiles(profiles: SocialMediaProfile[]): Promise<SocialMediaProfile[]> {
