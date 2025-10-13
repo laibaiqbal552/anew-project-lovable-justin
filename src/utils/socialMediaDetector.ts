@@ -50,6 +50,15 @@ export class SocialMediaDetector {
       baseScore: 20
     },
     {
+      name: 'threads',
+      domains: ['threads.net'],
+      patterns: [
+        /(?:https?:\/\/)?(?:www\.)?threads\.net\/@([a-zA-Z0-9._-]+)/gi,
+        /(?:https?:\/\/)?(?:www\.)?threads\.net\/([a-zA-Z0-9._-]+)/gi
+      ],
+      baseScore: 15
+    },
+    {
       name: 'twitter',
       domains: ['twitter.com', 'x.com'],
       patterns: [
@@ -231,15 +240,15 @@ export class SocialMediaDetector {
     // Enhanced patterns to catch social links in various contexts
     const enhancedPatterns = [
       // Direct href links
-      /href=["']([^"']*(?:facebook|fb|instagram|twitter|x\.com|linkedin|youtube|tiktok)[^"']*)["']/gi,
+      /href=["']([^"']*(?:facebook|fb|instagram|threads\.net|twitter|x\.com|linkedin|youtube|tiktok)[^"']*)["']/gi,
       // Social media icons with links
       /social[^>]*href=["']([^"']*)["']/gi,
       // Follow us links
       /follow[^>]*href=["']([^"']*)["']/gi,
       // Footer social links
-      /footer[^>]*(?:facebook|instagram|twitter|linkedin|youtube|tiktok)[^>]*href=["']([^"']*)["']/gi,
+      /footer[^>]*(?:facebook|instagram|threads|twitter|linkedin|youtube|tiktok)[^>]*href=["']([^"']*)["']/gi,
       // Contact section social links
-      /contact[^>]*(?:facebook|instagram|twitter|linkedin|youtube|tiktok)[^>]*href=["']([^"']*)["']/gi
+      /contact[^>]*(?:facebook|instagram|threads|twitter|linkedin|youtube|tiktok)[^>]*href=["']([^"']*)["']/gi
     ];
 
     // Extract using enhanced patterns
@@ -365,6 +374,7 @@ export class SocialMediaDetector {
     const urlMap: Record<string, string> = {
       'facebook': `https://facebook.com/${username}`,
       'instagram': `https://instagram.com/${username}`,
+      'threads': `https://threads.net/@${username}`,
       'twitter': `https://twitter.com/${username}`,
       'linkedin': `https://linkedin.com/company/${username}`,
       'youtube': `https://youtube.com/@${username}`,
@@ -590,6 +600,7 @@ export class SocialMediaDetector {
     const baseEngagement = Math.random() * 5 + 1; // 1-6%
     const platformMultiplier = {
       'instagram': 1.2,
+      'threads': 1.3,
       'tiktok': 1.5,
       'facebook': 0.8,
       'twitter': 1.0,
@@ -705,6 +716,9 @@ export class SocialMediaDetector {
       } else if (platform.name === 'tiktok') {
         const match = pathname.match(/\/@([^\/\?]+)/);
         return match ? match[1] : '';
+      } else if (platform.name === 'threads') {
+        const match = pathname.match(/\/@([^\/\?]+)/);
+        return match ? match[1] : '';
       }
 
       return '';
@@ -749,6 +763,7 @@ export class SocialMediaDetector {
     const baseFollowers = {
       'facebook': 2000,
       'instagram': 1500,
+      'threads': 800,
       'twitter': 800,
       'linkedin': 500,
       'youtube': 1200,
@@ -773,6 +788,7 @@ export class SocialMediaDetector {
     // Platform-typical engagement rates
     const engagementRates = {
       'instagram': 2.5,
+      'threads': 2.8,
       'tiktok': 4.2,
       'facebook': 1.8,
       'twitter': 1.4,

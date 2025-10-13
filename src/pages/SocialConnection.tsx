@@ -24,7 +24,8 @@ import {
   ExternalLink,
   Users,
   Eye,
-  Star
+  Star,
+  MessageCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -62,6 +63,14 @@ const socialPlatforms: SocialPlatform[] = [
     color: 'bg-gradient-to-br from-purple-600 to-pink-600',
     placeholder: 'https://instagram.com/yourbusiness',
     description: 'Profile analytics and content performance'
+  },
+  {
+    id: 'threads',
+    name: 'Threads',
+    icon: MessageCircle,
+    color: 'bg-black',
+    placeholder: 'https://threads.net/@yourbusiness',
+    description: 'Conversation engagement and community metrics'
   },
   {
     id: 'twitter',
@@ -746,7 +755,19 @@ const SocialConnection = () => {
 
               <TabsContent value="detected" className="mt-6">
                 <div className="space-y-6">
-                  {detectedSocialData ? (
+                  {isDetecting ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                      <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                      <div className="text-center">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          Detecting Social Media Profiles
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Please wait while we scan your website for social media links...
+                        </p>
+                      </div>
+                    </div>
+                  ) : detectedSocialData ? (
                     <>
                       {detectedSocialData.platforms.length > 0 ? (
                         <Alert className="bg-green-50 border-green-200">
