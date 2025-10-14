@@ -103,34 +103,16 @@ export class SocialMediaDetector {
       // First, validate website content quality
       const websiteQuality = await this.validateWebsiteQuality(websiteUrl);
 
-      // Method 1: Website Crawling (Primary focus - find social links in website)
+      // ONLY Method: Website Crawling - find social links ACTUALLY on the website
       const crawledProfiles = await this.crawlWebsiteForSocialLinks(websiteUrl);
       if (crawledProfiles.length > 0) {
         foundProfiles.push(...crawledProfiles);
         detectionMethods.push('Website Social Links');
+      } else {
+        console.log('No social media links found on website');
       }
 
-      // Fallback: if the website only has share buttons or no direct profile links,
-      // attempt heuristic discovery using domain and business name
-      if (foundProfiles.length === 0) {
-        console.warn('No direct profile links found; running heuristic fallbacks');
-        try {
-          const byDomain = await this._searchByDomain(this.extractDomain(websiteUrl));
-          if (byDomain.length > 0) {
-            foundProfiles.push(...byDomain);
-            detectionMethods.push('Fallback: Domain heuristic');
-          }
-        } catch {}
-        if (businessName) {
-          try {
-            const byName = await this._searchByBusinessName(businessName);
-            if (byName.length > 0) {
-              foundProfiles.push(...byName);
-              detectionMethods.push('Fallback: Business name heuristic');
-            }
-          } catch {}
-        }
-      }
+      // NO FALLBACKS - Only show what's actually on the website!
 
       // Remove duplicates before enhancement
       const deduplicatedProfiles = this.removeDuplicates(foundProfiles);
@@ -301,74 +283,12 @@ export class SocialMediaDetector {
     return filtered;
   }
 
-  // @ts-ignore - Helper method for future use
-  private async _searchByBusinessName(businessName: string): Promise<SocialMediaProfile[]> {
-    const profiles: SocialMediaProfile[] = [];
-    const cleanBusinessName = this.cleanBusinessName(businessName);
+  // REMOVED: _searchByBusinessName - We don't guess profiles based on business names
+  // REMOVED: _searchByDomain - We don't guess profiles based on domain names
+  // We ONLY show social media links that are actually found on the website
 
-    // Generate common username variations
-    const usernameVariations = this.generateUsernameVariations(cleanBusinessName);
-
-    // Check each platform for business name variations
-    for (const platform of this.socialPlatforms) {
-      for (const username of usernameVariations) {
-        const profile = await this.checkProfileExists(platform.name, username);
-        if (profile) {
-          profiles.push(profile);
-        }
-      }
-    }
-
-    return profiles;
-  }
-
-  // @ts-ignore - Helper method for future use
-  private async _searchByDomain(domain: string): Promise<SocialMediaProfile[]> {
-    const profiles: SocialMediaProfile[] = [];
-
-    // Extract business name from domain and build deterministic candidates
-    const base = domain.split('.')[0].replace(/[-_]/g, '');
-    const username = base.toLowerCase();
-
-    // Focus on primary platforms for heuristics
-    const mainPlatforms = ['facebook', 'instagram', 'twitter', 'linkedin', 'youtube'];
-
-    for (const platform of mainPlatforms) {
-      const url = this.buildProfileUrl(platform, username);
-      profiles.push({
-        platform,
-        url,
-        username,
-        completeness: 40 // lower confidence than direct website links
-      });
-    }
-
-    return profiles;
-  }
-
-  private async checkProfileExists(platform: string, username: string): Promise<SocialMediaProfile | null> {
-    // For now, simulate profile checking to avoid CORS issues
-    // In production, this would use proper API endpoints
-    const url = this.buildProfileUrl(platform, username);
-
-    // Simulate some profiles being found based on common patterns
-    const commonProfiles = ['company', 'business', 'official', 'inc', 'corp'];
-    const isLikelyBusiness = commonProfiles.some(term => username.toLowerCase().includes(term));
-
-    if (isLikelyBusiness || Math.random() > 0.7) {
-      return {
-        platform,
-        url,
-        username,
-        completeness: Math.floor(Math.random() * 40) + 60, // 60-100%
-        followers: Math.floor(Math.random() * 10000) + 500,
-        verified: Math.random() > 0.8,
-        engagement: Math.random() * 3 + 1 // 1-4%
-      };
-    }
-
-    return null;
-  }
+  // REMOVED: checkProfileExists - We don't create fake/simulated profiles
+  // We ONLY show real social media links found on the actual website
 
   private buildProfileUrl(platform: string, username: string): string {
     const urlMap: Record<string, string> = {
@@ -384,70 +304,8 @@ export class SocialMediaDetector {
     return urlMap[platform] || '';
   }
 
-  // @ts-ignore - Helper method for future use
-  private _isLikelyBusinessProfile(_html: string, _username: string): boolean {
-    // Heuristics to determine if it's a business profile
-    const businessIndicators = [
-      /business|company|corp|inc|llc/i,
-      /contact|email|phone|address/i,
-      /products|services|solutions/i,
-      /about us|our team|mission/i
-    ];
-
-    return businessIndicators.some(pattern => pattern.test(_html));
-  }
-
-  // @ts-ignore - Helper method for future use
-  private _calculateProfileCompleteness(_html: string): number {
-    let score = 0;
-    const indicators = [
-      { pattern: /profile.*image|avatar/i, points: 15 },
-      { pattern: /bio|description|about/i, points: 20 },
-      { pattern: /contact|email|phone/i, points: 15 },
-      { pattern: /website|link/i, points: 10 },
-      { pattern: /verified|badge/i, points: 20 },
-      { pattern: /followers|following/i, points: 10 },
-      { pattern: /posts|tweets|content/i, points: 10 }
-    ];
-
-    indicators.forEach(indicator => {
-      if (indicator.pattern.test(_html)) {
-        score += indicator.points;
-      }
-    });
-
-    return Math.min(score, 100);
-  }
-
-  // @ts-ignore - Helper method for future use
-  private _extractFollowerCount(_html: string): number {
-    const followerPatterns = [
-      /(\d+(?:,\d+)*)\s*followers/i,
-      /(\d+(?:,\d+)*)\s*following/i,
-      /(\d+(?:\.\d+)?[km]?)\s*followers/i
-    ];
-
-    for (const pattern of followerPatterns) {
-      const match = _html.match(pattern);
-      if (match) {
-        return this.parseFollowerCount(match[1]);
-      }
-    }
-
-    return 0;
-  }
-
-  private parseFollowerCount(countStr: string): number {
-    const num = parseFloat(countStr.replace(/,/g, ''));
-    if (countStr.includes('k')) return num * 1000;
-    if (countStr.includes('m')) return num * 1000000;
-    return num;
-  }
-
-  // @ts-ignore - Helper method for future use
-  private _isVerifiedProfile(_html: string): boolean {
-    return /verified|badge|checkmark/i.test(_html);
-  }
+  // REMOVED: All heuristic/guessing helper methods
+  // We ONLY use actual links found on the website
 
   private cleanBusinessName(name: string): string {
     return name
@@ -457,52 +315,9 @@ export class SocialMediaDetector {
       .trim();
   }
 
-  // @ts-ignore - Helper method for future use
-  private _fallbackSocialDetection(_websiteUrl: string): SocialMediaProfile[] {
-    // Fallback method when website crawling fails
-    const domain = this.extractDomain(_websiteUrl);
-    const businessName = domain.split('.')[0];
-
-    // Generate some likely social media profiles based on domain
-    const profiles: SocialMediaProfile[] = [];
-    const mainPlatforms = ['facebook', 'instagram', 'twitter', 'linkedin'];
-
-    mainPlatforms.forEach(platform => {
-      // Simulate finding some profiles
-      if (Math.random() > 0.6) {
-        profiles.push({
-          platform,
-          url: this.buildProfileUrl(platform, businessName),
-          username: businessName,
-          completeness: Math.floor(Math.random() * 30) + 50,
-          followers: Math.floor(Math.random() * 5000) + 100,
-          engagement: Math.random() * 2 + 1
-        });
-      }
-    });
-
-    return profiles;
-  }
-
-  private generateUsernameVariations(businessName: string): string[] {
-    const variations = new Set<string>();
-    const clean = this.cleanBusinessName(businessName);
-
-    variations.add(clean);
-    variations.add(clean.replace(/\s/g, ''));
-    variations.add(clean.replace(/\s/g, '_'));
-    variations.add(clean.replace(/\s/g, '-'));
-    variations.add(clean.replace(/\s/g, '.'));
-
-    // Add abbreviated versions
-    const words = businessName.split(/\s+/);
-    if (words.length > 1) {
-      variations.add(words.map(w => w[0]).join('').toLowerCase());
-      variations.add(words[0].toLowerCase() + words.slice(1).map(w => w[0]).join(''));
-    }
-
-    return Array.from(variations).filter(v => v.length >= 2);
-  }
+  // REMOVED: _fallbackSocialDetection - We don't generate fake profiles
+  // REMOVED: generateUsernameVariations - We don't guess usernames
+  // We ONLY show social media links that are actually on the website HTML
 
   private extractDomain(url: string): string {
     try {

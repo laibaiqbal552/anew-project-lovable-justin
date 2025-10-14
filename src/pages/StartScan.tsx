@@ -79,9 +79,34 @@ const StartScan = () => {
   const [reviewData, setReviewData] = useState<ScanForm | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check if user is already logged in
+  // Check if user is already logged in AND if returning from social media
   useEffect(() => {
     const checkAuth = async () => {
+      // FIRST: Check if returning from social media step (highest priority)
+      const fromSocialMedia = localStorage.getItem('fromSocialMedia');
+      if (fromSocialMedia === 'true') {
+        // Load saved form data
+        const savedData = localStorage.getItem('registrationData');
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          form.reset(parsedData);
+          setReviewData(parsedData);
+
+          // Check if user is authenticated to set correct step count
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            setIsAuthenticated(true);
+            setSkipAccount(true);
+          }
+
+          setStep(4); // Go directly to review step
+        }
+        localStorage.removeItem('fromSocialMedia');
+        setIsCheckingAuth(false);
+        return; // Exit early - don't check auth again
+      }
+
+      // SECOND: Check authentication
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setIsAuthenticated(true);
@@ -91,22 +116,6 @@ const StartScan = () => {
       setIsCheckingAuth(false);
     };
     checkAuth();
-  }, []);
-
-  // Check if returning from social media step
-  useEffect(() => {
-    const fromSocialMedia = localStorage.getItem('fromSocialMedia');
-    if (fromSocialMedia === 'true') {
-      // Load saved form data
-      const savedData = localStorage.getItem('registrationData');
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        form.reset(parsedData);
-        setReviewData(parsedData);
-        setStep(4); // Go directly to review step
-      }
-      localStorage.removeItem('fromSocialMedia');
-    }
   }, []);
 
   const form = useForm<ScanForm>({
@@ -289,9 +298,11 @@ const StartScan = () => {
   };
 
   const totalSteps = isAuthenticated ? 4 : 5;
+
+  // Calculate progress value based on authentication status
   const progressValue = isAuthenticated
-    ? (step === 2 ? 25 : step === 4 ? 75 : 50)
-    : (step === 1 ? 20 : step === 2 ? 40 : step === 4 ? 80 : 60);
+    ? (step === 2 ? 25 : step === 4 ? 75 : 50)  // For logged-in users: Step 1 (Business) = 25%, Step 2 (Social) = 50%, Step 3 (Review) = 75%
+    : (step === 1 ? 20 : step === 2 ? 40 : step === 4 ? 80 : 60);  // For non-logged-in: Step 1 = 20%, Step 2 = 40%, Step 3 (Social) = 60%, Step 4 (Review) = 80%
 
   // Show loading state while checking authentication
   if (isCheckingAuth) {
@@ -321,7 +332,12 @@ const StartScan = () => {
           <div className="mt-6">
             <Progress value={progressValue} className="w-full max-w-md mx-auto" />
             <p className="text-sm text-gray-500 mt-2">
-              Step {isAuthenticated ? (step === 2 ? '1' : step === 4 ? '3' : '2') : (step === 4 ? '4' : step)} of {totalSteps}
+              {/* For logged-in users: steps are 1,2,3 (Business, Social, Review) */}
+              {/* For non-logged-in: steps are 1,2,3,4,5 (Account, Business, Social, Review, Analysis) */}
+              Step {isAuthenticated
+                ? (step === 2 ? '1' : step === 4 ? '3' : '2')  // Logged-in: Step 2->1, Step 4->3
+                : (step === 1 ? '1' : step === 2 ? '2' : step === 4 ? '4' : step)  // Non-logged-in: normal progression
+              } of {totalSteps}
             </p>
           </div>
         </div>
