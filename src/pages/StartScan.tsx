@@ -173,10 +173,72 @@ const StartScan = () => {
     setError(null);
 
     try {
-      if (skipAccount) {
+      // Check if user is already authenticated (logged in before starting this flow)
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user && isAuthenticated) {
+        // User is already logged in - create business for this user
+        const { data: business, error: businessError } = await supabase
+          .from('businesses')
+          .insert({
+            user_id: user.id,
+            business_name: data.businessName,
+            website_url: data.websiteUrl,
+            industry: data.industry,
+            address: data.address,
+            phone: data.phone,
+            description: data.description,
+          })
+          .select()
+          .single();
+
+        if (businessError) {
+          console.error('Business creation error:', businessError);
+          setError('Failed to save business details. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+
+        // Store business info for analysis
+        localStorage.setItem('currentBusinessId', business.id);
+        localStorage.setItem('businessWebsiteUrl', data.websiteUrl);
+        localStorage.setItem('businessName', data.businessName);
+        localStorage.removeItem('isGuestUser');
+
+        // Clean up temporary data
+        localStorage.removeItem('registrationData');
+        localStorage.removeItem('fromSocialMedia');
+
+        // Save social URLs from localStorage to database if they exist
+        const savedSocialUrls = localStorage.getItem('socialUrls');
+        if (savedSocialUrls) {
+          try {
+            const socialUrls = JSON.parse(savedSocialUrls);
+            for (const [platform, url] of Object.entries(socialUrls)) {
+              if (url && typeof url === 'string' && url.trim() !== '') {
+                await supabase
+                  .from('social_accounts')
+                  .insert({
+                    business_id: business.id,
+                    platform: platform,
+                    account_url: url.trim(),
+                    is_connected: false,
+                  });
+              }
+            }
+            localStorage.removeItem('socialUrls');
+          } catch (err) {
+            console.error('Error processing saved social URLs:', err);
+          }
+        }
+
+        toast.success('Business information saved! Starting your brand analysis...');
+        navigate('/analysis');
+
+      } else if (skipAccount && !user) {
         // Guest flow - store business info in localStorage only
         const guestBusinessId = `guest_${Date.now()}`;
-        
+
         localStorage.setItem('currentBusinessId', guestBusinessId);
         localStorage.setItem('businessWebsiteUrl', data.websiteUrl);
         localStorage.setItem('businessName', data.businessName);
@@ -189,7 +251,7 @@ const StartScan = () => {
         toast.success('Starting your brand analysis...');
         navigate('/analysis');
       } else {
-        // Authenticated flow - create account and save to database
+        // New user registration flow - create account and save to database
         const redirectUrl = `${window.location.origin}/`;
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: data.email,
@@ -719,7 +781,19 @@ const StartScan = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setStep(step - 1)}
+                    onClick={() => {
+                      // Handle back navigation correctly
+                      if (step === 4) {
+                        // From review step, go back to social media connection page
+                        navigate('/connect');
+                      } else if (step === 2 && isAuthenticated) {
+                        // For authenticated users on business details, cancel to home
+                        navigate('/');
+                      } else {
+                        // Normal back navigation
+                        setStep(step - 1);
+                      }
+                    }}
                     disabled={isLoading}
                   >
                     Back
@@ -748,14 +822,19 @@ const StartScan = () => {
                 ) : (
                   <Button
                     type="button"
-                    onClick={form.handleSubmit(handleSubmit)}
-                    disabled={isLoading}
+                    onClick={() => {
+                      // Use reviewData directly since it's already validated
+                      if (reviewData) {
+                        handleSubmit(reviewData);
+                      }
+                    }}
+                    disabled={isLoading || !reviewData}
                     className="btn-primary flex items-center gap-2"
                   >
                     {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Creating Account...
+                        {skipAccount || isAuthenticated ? 'Starting Analysis...' : 'Creating Account...'}
                       </>
                     ) : (
                       <>

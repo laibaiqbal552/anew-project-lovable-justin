@@ -154,111 +154,208 @@ export class SocialMediaDetector {
 
   private async crawlWebsiteForSocialLinks(websiteUrl: string): Promise<SocialMediaProfile[]> {
     try {
-      // Try multiple CORS proxy services
-      const proxies = [
-        `https://corsproxy.io/?${encodeURIComponent(websiteUrl)}`,
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(websiteUrl)}`,
-        `https://cors-anywhere.herokuapp.com/${websiteUrl}`
-      ];
-
+      console.log(`🌐 Starting to crawl website: ${websiteUrl}`);
       let htmlContent = '';
+      let fetchMethod = '';
 
-      for (const proxyUrl of proxies) {
+      // STEP 1: Try Supabase Edge Function with rendering support (best for JavaScript sites)
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseAnonKey) {
         try {
-          const response = await fetch(proxyUrl, {
+          console.log('📡 Trying Supabase Edge Function with rendering support...');
+          const response = await fetch(`${supabaseUrl}/functions/v1/fetch-rendered-html`, {
+            method: 'POST',
             headers: {
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'User-Agent': 'Mozilla/5.0 (compatible; BrandAnalyzer/1.0)'
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseAnonKey}`,
             },
-            signal: AbortSignal.timeout(15000)
+            body: JSON.stringify({ url: websiteUrl }),
+            signal: AbortSignal.timeout(30000) // 30 second timeout for rendering
           });
 
           if (response.ok) {
-            const data = await response.text();
-            htmlContent = data;
-            break;
+            const result = await response.json();
+            if (result.success && result.html) {
+              htmlContent = result.html;
+              fetchMethod = `Edge Function (${result.method})`;
+              console.log(`✅ Edge Function succeeded using: ${result.method}`);
+              console.log(`📄 HTML content length: ${htmlContent.length} characters`);
+            }
+          } else {
+            console.warn(`⚠️ Edge Function failed with status: ${response.status}`);
           }
-        } catch (proxyError) {
-          console.warn(`Proxy ${proxyUrl} failed:`, proxyError);
-          continue;
+        } catch (edgeError: any) {
+          console.warn('⚠️ Edge Function failed:', edgeError.message);
         }
       }
 
+      // STEP 2: Try direct fetch as fallback (fastest, works for sites with proper CORS headers)
       if (!htmlContent) {
-        console.warn('All CORS proxies failed, trying direct fetch');
         try {
-          // Try direct fetch as fallback
-          const response = await fetch(websiteUrl, {
+          console.log('📡 Attempting direct fetch...');
+          const directResponse = await fetch(websiteUrl, {
             mode: 'cors',
             headers: {
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'User-Agent': 'Mozilla/5.0 (compatible; BrandAnalyzer/1.0)'
-            }
+            },
+            signal: AbortSignal.timeout(10000)
           });
-          if (response.ok) {
-            htmlContent = await response.text();
+
+          if (directResponse.ok) {
+            htmlContent = await directResponse.text();
+            fetchMethod = 'Direct fetch';
+            console.log(`✅ Direct fetch succeeded! HTML length: ${htmlContent.length}`);
+          } else {
+            console.warn(`⚠️ Direct fetch failed with status: ${directResponse.status}`);
           }
-        } catch (directError) {
-          console.warn('Direct fetch also failed:', directError);
+        } catch (directError: any) {
+          console.warn('⚠️ Direct fetch failed (expected for CORS-restricted sites):', directError.message);
         }
       }
 
+      // STEP 3: If direct fetch failed, try CORS proxies
       if (!htmlContent) {
-        console.warn('All fetching methods failed, no social detection possible');
+        console.log('🔄 Trying CORS proxy services...');
+        const proxies = [
+          { name: 'corsproxy.io', url: `https://corsproxy.io/?${encodeURIComponent(websiteUrl)}` },
+          { name: 'api.codetabs.com', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(websiteUrl)}` },
+          { name: 'allorigins.win', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(websiteUrl)}` }
+        ];
+
+        for (const proxy of proxies) {
+          try {
+            console.log(`📡 Trying proxy: ${proxy.name}...`);
+            const response = await fetch(proxy.url, {
+              headers: {
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              },
+              signal: AbortSignal.timeout(15000)
+            });
+
+            if (response.ok) {
+              const data = await response.text();
+              if (data && data.length > 100) { // Ensure we got meaningful content
+                htmlContent = data;
+                fetchMethod = `CORS proxy (${proxy.name})`;
+                console.log(`✅ Proxy ${proxy.name} succeeded! HTML length: ${htmlContent.length}`);
+                break;
+              } else {
+                console.warn(`⚠️ Proxy ${proxy.name} returned minimal content`);
+              }
+            } else {
+              console.warn(`⚠️ Proxy ${proxy.name} failed with status: ${response.status}`);
+            }
+          } catch (proxyError: any) {
+            console.warn(`❌ Proxy ${proxy.name} error:`, proxyError.message);
+            continue;
+          }
+        }
+      }
+
+      // STEP 4: Check if we got any content
+      if (!htmlContent || htmlContent.length < 100) {
+        console.error('❌ Failed to fetch website HTML');
+        console.error('   Website:', websiteUrl);
+        console.error('   All methods failed (Edge Function + direct + 3 CORS proxies)');
+        console.error('   This website may be blocking automated access or have strict CORS policies');
         return [];
       }
 
-      return this.extractSocialLinksFromHTML(htmlContent);
+      console.log(`✅ Successfully fetched website HTML using: ${fetchMethod}`);
+      if (!fetchMethod.includes('Edge Function')) {
+        console.log(`📄 HTML content length: ${htmlContent.length} characters`);
+      }
+
+      // STEP 5: Extract social links from the HTML
+      const extractedProfiles = this.extractSocialLinksFromHTML(htmlContent);
+
+      // STEP 6: If no social links found and the HTML suggests JavaScript rendering, inform the user
+      if (extractedProfiles.length === 0) {
+        const isJavaScriptSite = this.detectJavaScriptRenderedSite(htmlContent);
+        if (isJavaScriptSite) {
+          console.warn('⚠️ This website appears to use JavaScript rendering (React/Next.js/Vue)');
+          console.warn('   Social media links may be added dynamically after page load');
+          console.warn('   The initial HTML does not contain social media links');
+          console.warn('   SOLUTION 1: Deploy the "fetch-rendered-html" Edge Function for JavaScript rendering support');
+          console.warn('   SOLUTION 2: Manually add your social media URLs on the social connection page');
+        }
+      }
+
+      console.log(`✅ Extraction complete: Found ${extractedProfiles.length} social profiles`);
+
+      return extractedProfiles;
     } catch (error) {
-      console.error('Website crawling failed:', error);
+      console.error('❌ Website crawling failed with error:', error);
       return [];
     }
+  }
+
+  private detectJavaScriptRenderedSite(html: string): boolean {
+    // Check for common JavaScript framework indicators
+    const jsFrameworkIndicators = [
+      /<script[^>]*src=["'][^"']*react[^"']*["']/i,
+      /<script[^>]*src=["'][^"']*next[^"']*["']/i,
+      /<script[^>]*src=["'][^"']*vue[^"']*["']/i,
+      /<script[^>]*src=["'][^"']*angular[^"']*["']/i,
+      /BAILOUT_TO_CLIENT_SIDE_RENDERING/i,
+      /__NEXT_DATA__/i,
+      /__nuxt/i,
+      /ng-version=/i,
+      /data-reactroot/i,
+      /data-react-helmet/i
+    ];
+
+    return jsFrameworkIndicators.some(pattern => pattern.test(html));
   }
 
   private extractSocialLinksFromHTML(html: string): SocialMediaProfile[] {
     const profiles: SocialMediaProfile[] = [];
     const foundUrls = new Set<string>();
 
-    // Enhanced patterns to catch social links in various contexts
-    const enhancedPatterns = [
-      // Direct href links
-      /href=["']([^"']*(?:facebook|fb|instagram|threads\.net|twitter|x\.com|linkedin|youtube|tiktok)[^"']*)["']/gi,
-      // Social media icons with links
-      /social[^>]*href=["']([^"']*)["']/gi,
-      // Follow us links
-      /follow[^>]*href=["']([^"']*)["']/gi,
-      // Footer social links
-      /footer[^>]*(?:facebook|instagram|threads|twitter|linkedin|youtube|tiktok)[^>]*href=["']([^"']*)["']/gi,
-      // Contact section social links
-      /contact[^>]*(?:facebook|instagram|threads|twitter|linkedin|youtube|tiktok)[^>]*href=["']([^"']*)["']/gi
-    ];
+    console.log('🔍 Starting social media extraction from HTML...');
 
-    // Extract using enhanced patterns
-    enhancedPatterns.forEach(pattern => {
-      const matches = html.matchAll(pattern);
-      for (const match of matches) {
-        const url = match[1];
-        if (url && !foundUrls.has(url)) {
-          foundUrls.add(url);
-          const platform = this.identifyPlatform(url);
-          if (platform) {
-            const username = this.extractUsername(url, platform);
-            profiles.push({
-              platform: platform.name,
-              url: this.normalizeUrl(url),
-              username,
-              completeness: 60 // Higher confidence for actual website links
-            });
-          }
+    // STEP 1: Extract ALL href attributes that might contain social media links
+    const allHrefMatches = html.matchAll(/href=["']([^"']+)["']/gi);
+    let hrefCount = 0;
+
+    for (const match of allHrefMatches) {
+      hrefCount++;
+      const url = match[1];
+
+      // Check if this URL contains any social media domain
+      const socialDomains = ['facebook.com', 'fb.com', 'instagram.com', 'threads.net', 'twitter.com', 'x.com', 'linkedin.com', 'youtube.com', 'tiktok.com'];
+      const containsSocialDomain = socialDomains.some(domain => url.toLowerCase().includes(domain));
+
+      if (containsSocialDomain && !foundUrls.has(url)) {
+        foundUrls.add(url);
+        const platform = this.identifyPlatform(url);
+
+        if (platform) {
+          const username = this.extractUsername(url, platform);
+          console.log(`✅ Found ${platform.name} link: ${url} (username: ${username})`);
+
+          profiles.push({
+            platform: platform.name,
+            url: this.normalizeUrl(url),
+            username,
+            completeness: 70 // Higher confidence for href-extracted links
+          });
         }
       }
-    });
+    }
 
-    // Standard regex patterns as fallback
+    console.log(`📊 Scanned ${hrefCount} href attributes, found ${foundUrls.size} social media URLs`);
+
+    // STEP 2: Use platform-specific regex patterns to catch any missed links
     this.socialPlatforms.forEach(platform => {
       platform.patterns.forEach(pattern => {
         const matches = html.matchAll(pattern);
+        let platformMatches = 0;
+
         for (const match of matches) {
+          platformMatches++;
           const url = match[0].startsWith('http') ? match[0] : `https://${match[0]}`;
           const normalizedUrl = this.normalizeUrl(url);
 
@@ -266,20 +363,41 @@ export class SocialMediaDetector {
             foundUrls.add(normalizedUrl);
             const username = match[1];
 
+            console.log(`✅ Found ${platform.name} via pattern: ${normalizedUrl} (username: ${username})`);
+
             profiles.push({
               platform: platform.name,
               url: normalizedUrl,
               username,
-              completeness: 50 // Default for pattern-matched profiles
+              completeness: 60 // Pattern-matched profiles
             });
           }
+        }
+
+        if (platformMatches > 0) {
+          console.log(`📊 Platform ${platform.name}: found ${platformMatches} pattern matches`);
         }
       });
     });
 
-    // Filter out non-profile or tracking URLs (e.g., Facebook pixel /tr, YouTube /watch)
-    const filtered = profiles.filter(p => this.isLikelyProfileUrl(p.platform, p.url, p.username));
-    console.log(`Found ${profiles.length} social media links on website, ${filtered.length} likely profiles after filtering`);
+    // STEP 3: Filter out non-profile or tracking URLs
+    const filtered = profiles.filter(p => {
+      const isProfile = this.isLikelyProfileUrl(p.platform, p.url, p.username);
+      if (!isProfile) {
+        console.log(`❌ Filtered out non-profile URL: ${p.url}`);
+      }
+      return isProfile;
+    });
+
+    console.log(`📊 FINAL RESULTS: Found ${profiles.length} total links, ${filtered.length} valid profiles after filtering`);
+
+    if (filtered.length > 0) {
+      console.log('✅ Valid social profiles found:');
+      filtered.forEach(p => console.log(`   - ${p.platform}: ${p.url}`));
+    } else {
+      console.warn('⚠️ No valid social media profiles found on website');
+    }
+
     return filtered;
   }
 

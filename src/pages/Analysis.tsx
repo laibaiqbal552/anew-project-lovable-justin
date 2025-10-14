@@ -103,14 +103,6 @@ const Analysis = () => {
 
   const checkUserAndBusiness = async () => {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) {
-        console.log('No authenticated user, redirecting to home');
-        navigate('/');
-        return;
-      }
-      setUser(user);
-
       const currentBusinessId = localStorage.getItem('currentBusinessId');
       if (!currentBusinessId) {
         console.log('No business ID found, redirecting to setup');
@@ -119,20 +111,48 @@ const Analysis = () => {
       }
       setBusinessId(currentBusinessId);
 
-      // Load business details
-      const { data: businessData, error: businessError } = await supabase
-        .from('businesses')
-        .select('*')
-        .eq('id', currentBusinessId)
-        .single();
+      // Check if this is a guest user
+      const isGuest = localStorage.getItem('isGuestUser') === 'true';
 
-      if (businessError) {
-        console.error('Error loading business:', businessError);
-        navigate('/setup');
-        return;
+      if (isGuest) {
+        // Guest mode - load business data from localStorage
+        console.log('Guest mode detected, loading from localStorage');
+        const guestBusiness = {
+          id: currentBusinessId,
+          business_name: localStorage.getItem('businessName') || 'Your Business',
+          website_url: localStorage.getItem('businessWebsiteUrl') || '',
+          industry: localStorage.getItem('businessIndustry') || '',
+          address: localStorage.getItem('businessAddress') || '',
+          phone: localStorage.getItem('businessPhone') || '',
+          description: localStorage.getItem('businessDescription') || '',
+        };
+        setBusiness(guestBusiness);
+        setUser({ id: 'guest', email: 'guest@temp.com' }); // Mock user for guest
+      } else {
+        // Authenticated mode - load from database
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+          console.log('No authenticated user, redirecting to home');
+          navigate('/');
+          return;
+        }
+        setUser(user);
+
+        // Load business details from database
+        const { data: businessData, error: businessError } = await supabase
+          .from('businesses')
+          .select('*')
+          .eq('id', currentBusinessId)
+          .single();
+
+        if (businessError) {
+          console.error('Error loading business:', businessError);
+          navigate('/setup');
+          return;
+        }
+
+        setBusiness(businessData);
       }
-
-      setBusiness(businessData);
     } catch (err) {
       console.error('Error checking user and business:', err);
       navigate('/');
@@ -144,32 +164,44 @@ const Analysis = () => {
 
     try {
       console.log('Starting brand analysis for business:', businessId);
-      // Create initial brand report
-      const { data: report, error: reportError } = await supabase
-        .from('brand_reports')
-        .insert({
-          business_id: businessId,
-          report_type: 'comprehensive',
-          overall_score: 0,
-          analysis_data: {},
-          report_status: 'processing',
-          processing_started_at: new Date().toISOString()
-        })
-        .select()
-        .single();
 
-      if (reportError) {
-        console.error('Error creating report:', reportError);
-        throw reportError;
+      const isGuest = localStorage.getItem('isGuestUser') === 'true';
+      let reportIdToUse = null;
+
+      if (!isGuest) {
+        // Authenticated user - create report in database
+        const { data: report, error: reportError } = await supabase
+          .from('brand_reports')
+          .insert({
+            business_id: businessId,
+            report_type: 'comprehensive',
+            overall_score: 0,
+            analysis_data: {},
+            report_status: 'processing',
+            processing_started_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (reportError) {
+          console.error('Error creating report:', reportError);
+          throw reportError;
+        }
+
+        reportIdToUse = report.id;
+        setReportId(report.id);
+        console.log('Brand report created:', report.id);
+      } else {
+        // Guest user - use temporary ID (won't save to database)
+        reportIdToUse = `guest_report_${Date.now()}`;
+        setReportId(reportIdToUse);
+        console.log('Guest mode: Using temporary report ID:', reportIdToUse);
       }
-
-      setReportId(report.id);
-      console.log('Brand report created:', report.id);
 
       // Start the real analysis using Edge Function
       cancelProgressRef.current = false;
       simulateProgressUI();
-      await runRealAnalysis(report.id);
+      await runRealAnalysis(reportIdToUse);
 
     } catch (err: any) {
       console.error('Failed to start analysis:', err);
@@ -348,75 +380,96 @@ const Analysis = () => {
         }
       ];
 
-      // Update the report with the comprehensive results
-      if (reportId) {
-        const { error: updateError } = await supabase
-          .from('brand_reports')
-          .update({
-            overall_score: overallScore,
-            website_score: websiteScore,
-            social_score: socialScore,
-            reputation_score: reputationScore,
-            visibility_score: visibilityScore,
-            consistency_score: consistencyScore,
-            positioning_score: positioningScore,
-            analysis_data: analysisData,
-            recommendations: recommendations,
-            report_status: 'completed',
-            processing_completed_at: new Date().toISOString()
-          })
-          .eq('id', reportId);
+      // Store results in localStorage for guest users or database for authenticated users
+      const isGuest = localStorage.getItem('isGuestUser') === 'true';
 
-        if (updateError) {
-          console.error('Error updating report:', updateError);
-        }
+      if (isGuest) {
+        // Guest user - store results in localStorage
+        console.log('Guest mode: Storing results in localStorage');
+        localStorage.setItem('guestAnalysisResults', JSON.stringify({
+          overall_score: overallScore,
+          website_score: websiteScore,
+          social_score: socialScore,
+          reputation_score: reputationScore,
+          visibility_score: visibilityScore,
+          consistency_score: consistencyScore,
+          positioning_score: positioningScore,
+          analysis_data: analysisData,
+          recommendations: recommendations,
+          report_status: 'completed',
+          processing_completed_at: new Date().toISOString()
+        }));
+      } else {
+        // Authenticated user - save to database
+        if (reportId) {
+          const { error: updateError } = await supabase
+            .from('brand_reports')
+            .update({
+              overall_score: overallScore,
+              website_score: websiteScore,
+              social_score: socialScore,
+              reputation_score: reputationScore,
+              visibility_score: visibilityScore,
+              consistency_score: consistencyScore,
+              positioning_score: positioningScore,
+              analysis_data: analysisData,
+              recommendations: recommendations,
+              report_status: 'completed',
+              processing_completed_at: new Date().toISOString()
+            })
+            .eq('id', reportId);
 
-        // Kick off enhanced insights via Edge Function to generate score_breakdowns
-        try {
-          console.log('Calling run-brand-analysis function...');
-          const { data: enhancedData, error: enhancedError } = await supabase.functions.invoke('run-brand-analysis', {
-            body: { businessId, reportId }
-          });
-
-          console.log('Enhanced insights response:', { enhancedData, enhancedError });
-
-          if (enhancedError) {
-            console.error('Enhanced insights function error:', enhancedError);
-            toast.error('Failed to generate detailed insights: ' + enhancedError.message);
-          } else if (enhancedData?.success && enhancedData.results) {
-            console.log('Enhanced insights received, updating report...');
-            const r = enhancedData.results;
-            const { error: secondUpdateErr } = await supabase
-              .from('brand_reports')
-              .update({
-                // Prefer enhanced results where available
-                overall_score: r.overall_score ?? overallScore,
-                website_score: r.website_score ?? websiteScore,
-                social_score: r.social_score ?? socialScore,
-                reputation_score: r.reputation_score ?? reputationScore,
-                visibility_score: r.visibility_score ?? visibilityScore,
-                consistency_score: r.consistency_score ?? consistencyScore,
-                positioning_score: r.positioning_score ?? positioningScore,
-                score_breakdowns: r.score_breakdowns,
-                analysis_data: r.analysis_data ?? analysisData,
-                recommendations: r.recommendations ?? recommendations,
-                data_quality: r.data_quality,
-                api_integration_status: r.api_integration_status,
-              })
-              .eq('id', reportId);
-
-            if (secondUpdateErr) {
-              console.error('Failed to save enhanced insights:', secondUpdateErr);
-              toast.error('Failed to save detailed insights to database');
-            } else {
-              console.log('✅ Enhanced insights with score breakdowns saved successfully');
-            }
-          } else {
-            console.warn('Enhanced insights not returned from function, response:', enhancedData);
+          if (updateError) {
+            console.error('Error updating report:', updateError);
           }
-        } catch (e: any) {
-          console.error('Failed to generate enhanced insights:', e);
-          toast.error('Error generating detailed insights: ' + e.message);
+
+          // Kick off enhanced insights via Edge Function to generate score_breakdowns
+          try {
+            console.log('Calling run-brand-analysis function...');
+            const { data: enhancedData, error: enhancedError } = await supabase.functions.invoke('run-brand-analysis', {
+              body: { businessId, reportId }
+            });
+
+            console.log('Enhanced insights response:', { enhancedData, enhancedError });
+
+            if (enhancedError) {
+              console.error('Enhanced insights function error:', enhancedError);
+              toast.error('Failed to generate detailed insights: ' + enhancedError.message);
+            } else if (enhancedData?.success && enhancedData.results) {
+              console.log('Enhanced insights received, updating report...');
+              const r = enhancedData.results;
+              const { error: secondUpdateErr } = await supabase
+                .from('brand_reports')
+                .update({
+                  // Prefer enhanced results where available
+                  overall_score: r.overall_score ?? overallScore,
+                  website_score: r.website_score ?? websiteScore,
+                  social_score: r.social_score ?? socialScore,
+                  reputation_score: r.reputation_score ?? reputationScore,
+                  visibility_score: r.visibility_score ?? visibilityScore,
+                  consistency_score: r.consistency_score ?? consistencyScore,
+                  positioning_score: r.positioning_score ?? positioningScore,
+                  score_breakdowns: r.score_breakdowns,
+                  analysis_data: r.analysis_data ?? analysisData,
+                  recommendations: r.recommendations ?? recommendations,
+                  data_quality: r.data_quality,
+                  api_integration_status: r.api_integration_status,
+                })
+                .eq('id', reportId);
+
+              if (secondUpdateErr) {
+                console.error('Failed to save enhanced insights:', secondUpdateErr);
+                toast.error('Failed to save detailed insights to database');
+              } else {
+                console.log('✅ Enhanced insights with score breakdowns saved successfully');
+              }
+            } else {
+              console.warn('Enhanced insights not returned from function, response:', enhancedData);
+            }
+          } catch (e: any) {
+            console.error('Failed to generate enhanced insights:', e);
+            toast.error('Error generating detailed insights: ' + e.message);
+          }
         }
       }
 

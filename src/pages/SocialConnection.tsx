@@ -629,16 +629,16 @@ const SocialConnection = () => {
     setIsLoading(true);
 
     try {
-      // Check if this is a temporary business ID (user hasn't created account yet)
-      const isTemporaryBusiness = businessId.startsWith('temp_');
+      // Check if this is a temporary or guest business ID (user hasn't created account or is in guest mode)
+      const isTemporaryBusiness = businessId.startsWith('temp_') || businessId.startsWith('guest_');
 
       if (isTemporaryBusiness) {
-        // For temporary business (registration flow), just save to localStorage
-        console.log('Temporary business detected, saving social URLs to localStorage');
+        // For temporary/guest business (registration flow or guest mode), just save to localStorage
+        console.log('Temporary/guest business detected, saving social URLs to localStorage');
         localStorage.setItem('socialUrls', JSON.stringify(socialUrls));
         toast.success('Social media information saved!');
       } else {
-        // For real business, save to database
+        // For real authenticated business, save to database
         for (const [platform, url] of Object.entries(socialUrls)) {
           const trimmed = url.trim()
           if (!trimmed) continue
