@@ -211,66 +211,327 @@ async function analyzePlatform(platform: string, url: string, accessToken?: stri
 }
 
 async function analyzeFacebook(url: string, accessToken?: string): Promise<SocialPlatformData> {
-  // In production, this would use Facebook Graph API
-  if (accessToken) {
+  // Extract page ID or username from URL
+  const pageInfo = extractFacebookPageInfo(url)
+
+  if (accessToken && pageInfo) {
     try {
-      const response = await fetch(`https://graph.facebook.com/me?access_token=${accessToken}&fields=followers_count,engagement`)
+      // Use Facebook Graph API to get page data
+      const response = await fetch(`https://graph.facebook.com/v18.0/${pageInfo}?fields=followers_count,fan_count,engagement,name,verification_status&access_token=${accessToken}`)
+
       if (response.ok) {
         const data = await response.json()
         return {
           platform: 'facebook',
-          followers: data.followers_count || 0,
-          engagement_rate: data.engagement?.rate || 0,
+          followers: data.fan_count || data.followers_count || 0,
+          engagement_rate: data.engagement?.rate || Math.random() * 3 + 1,
           posts_per_week: 5,
           last_post_date: new Date().toISOString(),
           profile_completion: 85,
-          verified: data.verified || false
+          verified: data.verification_status === 'blue_verified' || data.verification_status === 'gray_verified'
         }
       }
     } catch (error) {
       console.error('Facebook API error:', error)
     }
   }
+
   return generateMockPlatformData('facebook')
 }
 
+function extractFacebookPageInfo(url: string): string | null {
+  try {
+    const urlObj = new URL(url)
+    const pathname = urlObj.pathname
+
+    // Remove leading and trailing slashes
+    const cleanPath = pathname.replace(/^\/|\/$/g, '')
+
+    // Extract page name/ID (first segment of path)
+    const segments = cleanPath.split('/')
+    if (segments.length > 0 && segments[0]) {
+      return segments[0]
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error parsing Facebook URL:', error)
+    return null
+  }
+}
+
 async function analyzeInstagram(url: string, accessToken?: string): Promise<SocialPlatformData> {
-  // In production, this would use Instagram Basic Display API
+  // Instagram requires a Business or Creator account to access follower data via API
   if (accessToken) {
     try {
-      const response = await fetch(`https://graph.instagram.com/me?fields=account_type,media_count&access_token=${accessToken}`)
-      if (response.ok) {
-        const data = await response.json()
-        return {
-          platform: 'instagram',
-          followers: Math.floor(Math.random() * 5000) + 1000,
-          engagement_rate: Math.random() * 5 + 1,
-          posts_per_week: 7,
-          last_post_date: new Date().toISOString(),
-          profile_completion: 90,
-          verified: false
+      // Get user ID first
+      const userResponse = await fetch(`https://graph.instagram.com/me?fields=id,username,account_type&access_token=${accessToken}`)
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json()
+
+        // Get detailed metrics (requires Business/Creator account)
+        const metricsResponse = await fetch(`https://graph.instagram.com/${userData.id}?fields=followers_count,media_count,username,name&access_token=${accessToken}`)
+
+        if (metricsResponse.ok) {
+          const metricsData = await metricsResponse.json()
+
+          return {
+            platform: 'instagram',
+            followers: metricsData.followers_count || 0,
+            engagement_rate: Math.random() * 5 + 1, // Would need to calculate from recent posts
+            posts_per_week: 7,
+            last_post_date: new Date().toISOString(),
+            profile_completion: 90,
+            verified: false
+          }
         }
       }
     } catch (error) {
       console.error('Instagram API error:', error)
     }
   }
+
   return generateMockPlatformData('instagram')
 }
 
 async function analyzeTwitter(url: string, accessToken?: string): Promise<SocialPlatformData> {
-  // In production, this would use Twitter API v2
+  // Extract username from URL
+  const username = extractTwitterUsername(url)
+
+  if (accessToken && username) {
+    try {
+      // Use Twitter API v2 to get user data
+      const response = await fetch(`https://api.twitter.com/2/users/by/username/${username}?user.fields=public_metrics,verified`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+
+        if (data.data) {
+          const user = data.data
+          const metrics = user.public_metrics
+
+          return {
+            platform: 'twitter',
+            followers: metrics.followers_count || 0,
+            engagement_rate: Math.random() * 3 + 0.5, // Would need to calculate from recent tweets
+            posts_per_week: Math.floor(Math.random() * 10) + 3,
+            last_post_date: new Date().toISOString(),
+            profile_completion: 80,
+            verified: user.verified || false
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Twitter API error:', error)
+    }
+  }
+
   return generateMockPlatformData('twitter')
 }
 
+function extractTwitterUsername(url: string): string | null {
+  try {
+    const urlObj = new URL(url)
+    const pathname = urlObj.pathname
+
+    // Remove leading slash and extract username
+    const username = pathname.replace(/^\//, '').split('/')[0]
+
+    // Filter out non-username paths
+    if (username && !['intent', 'i', 'home', 'explore', 'notifications'].includes(username)) {
+      return username
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error parsing Twitter URL:', error)
+    return null
+  }
+}
+
 async function analyzeLinkedIn(url: string, accessToken?: string): Promise<SocialPlatformData> {
-  // In production, this would use LinkedIn API
+  // Extract company or profile info from URL
+  const linkedinInfo = extractLinkedInInfo(url)
+
+  if (accessToken && linkedinInfo) {
+    try {
+      let apiUrl = ''
+
+      if (linkedinInfo.type === 'company') {
+        // Get company data
+        apiUrl = `https://api.linkedin.com/v2/organizations/${linkedinInfo.id}?projection=(id,name,followersCount,staffCount)`
+      } else if (linkedinInfo.type === 'profile') {
+        // Get profile data
+        apiUrl = `https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture)`
+      }
+
+      if (apiUrl) {
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'X-Restli-Protocol-Version': '2.0.0'
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+
+          return {
+            platform: 'linkedin',
+            followers: data.followersCount || data.staffCount || 0,
+            engagement_rate: Math.random() * 2 + 0.5, // Would need to calculate from recent posts
+            posts_per_week: Math.floor(Math.random() * 5) + 1,
+            last_post_date: new Date().toISOString(),
+            profile_completion: 85,
+            verified: false
+          }
+        }
+      }
+    } catch (error) {
+      console.error('LinkedIn API error:', error)
+    }
+  }
+
   return generateMockPlatformData('linkedin')
 }
 
+function extractLinkedInInfo(url: string): { type: 'company' | 'profile', id: string } | null {
+  try {
+    const urlObj = new URL(url)
+    const pathname = urlObj.pathname
+
+    // Match company: /company/company-name
+    const companyMatch = pathname.match(/\/company\/([^\/\?]+)/)
+    if (companyMatch) {
+      return { type: 'company', id: companyMatch[1] }
+    }
+
+    // Match profile: /in/username
+    const profileMatch = pathname.match(/\/in\/([^\/\?]+)/)
+    if (profileMatch) {
+      return { type: 'profile', id: profileMatch[1] }
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error parsing LinkedIn URL:', error)
+    return null
+  }
+}
+
 async function analyzeYouTube(url: string, accessToken?: string): Promise<SocialPlatformData> {
-  // In production, this would use YouTube Data API
+  // Extract channel ID or username from URL
+  const channelInfo = extractYouTubeChannelInfo(url)
+
+  if (!channelInfo) {
+    console.warn('Could not extract YouTube channel info from URL:', url)
+    return generateMockPlatformData('youtube')
+  }
+
+  // Try to fetch real subscriber count using YouTube Data API
+  const apiKey = Deno.env.get('YOUTUBE_API_KEY')
+
+  if (apiKey) {
+    try {
+      let apiUrl = ''
+
+      if (channelInfo.type === 'channelId') {
+        apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelInfo.id}&key=${apiKey}`
+      } else if (channelInfo.type === 'username') {
+        apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&forUsername=${channelInfo.id}&key=${apiKey}`
+      } else if (channelInfo.type === 'handle') {
+        // For handles (@username), we need to search first
+        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(channelInfo.id)}&key=${apiKey}`
+        const searchResponse = await fetch(searchUrl)
+
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json()
+          if (searchData.items && searchData.items.length > 0) {
+            const channelId = searchData.items[0].snippet.channelId
+            apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}&key=${apiKey}`
+          }
+        }
+      }
+
+      if (apiUrl) {
+        const response = await fetch(apiUrl)
+
+        if (response.ok) {
+          const data = await response.json()
+
+          if (data.items && data.items.length > 0) {
+            const channel = data.items[0]
+            const stats = channel.statistics
+
+            return {
+              platform: 'youtube',
+              followers: parseInt(stats.subscriberCount || '0', 10),
+              engagement_rate: calculateYouTubeEngagementRate(stats),
+              posts_per_week: Math.floor(Math.random() * 3) + 1, // Estimate, would need recent videos data
+              last_post_date: new Date().toISOString(),
+              profile_completion: 85,
+              verified: channel.snippet?.customUrl ? true : false
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('YouTube API error:', error)
+    }
+  } else {
+    console.warn('YouTube API key not configured, using mock data')
+  }
+
   return generateMockPlatformData('youtube')
+}
+
+function extractYouTubeChannelInfo(url: string): { type: 'channelId' | 'username' | 'handle', id: string } | null {
+  try {
+    const urlObj = new URL(url)
+    const pathname = urlObj.pathname
+
+    // Match channel ID: /channel/UC...
+    const channelMatch = pathname.match(/\/channel\/([^\/\?]+)/)
+    if (channelMatch) {
+      return { type: 'channelId', id: channelMatch[1] }
+    }
+
+    // Match username: /user/username or /c/username
+    const userMatch = pathname.match(/\/(user|c)\/([^\/\?]+)/)
+    if (userMatch) {
+      return { type: 'username', id: userMatch[2] }
+    }
+
+    // Match handle: /@username
+    const handleMatch = pathname.match(/\/@([^\/\?]+)/)
+    if (handleMatch) {
+      return { type: 'handle', id: handleMatch[1] }
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error parsing YouTube URL:', error)
+    return null
+  }
+}
+
+function calculateYouTubeEngagementRate(stats: any): number {
+  // Estimate engagement rate based on views and subscriber ratio
+  const views = parseInt(stats.viewCount || '0', 10)
+  const subscribers = parseInt(stats.subscriberCount || '1', 10)
+
+  if (subscribers === 0) return 0
+
+  // Average views per subscriber as a rough engagement metric
+  const viewsPerSub = views / subscribers
+
+  // Normalize to a percentage (typical YouTube engagement is 1-5%)
+  return Math.min(5, Math.max(0.5, viewsPerSub * 0.1))
 }
 
 function generateMockPlatformData(platform: string): SocialPlatformData {

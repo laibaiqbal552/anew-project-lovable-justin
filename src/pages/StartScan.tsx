@@ -71,11 +71,27 @@ const industries = [
 
 const StartScan = () => {
   const navigate = useNavigate();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [skipAccount, setSkipAccount] = useState(false);
   const [reviewData, setReviewData] = useState<ScanForm | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setIsAuthenticated(true);
+        setSkipAccount(true);
+        setStep(2); // Skip to Business Details step
+      }
+      setIsCheckingAuth(false);
+    };
+    checkAuth();
+  }, []);
 
   // Check if returning from social media step
   useEffect(() => {
@@ -272,7 +288,19 @@ const StartScan = () => {
     }
   };
 
-  const progressValue = step === 1 ? 20 : step === 2 ? 40 : step === 4 ? 80 : 60;
+  const totalSteps = isAuthenticated ? 4 : 5;
+  const progressValue = isAuthenticated
+    ? (step === 2 ? 25 : step === 4 ? 75 : 50)
+    : (step === 1 ? 20 : step === 2 ? 40 : step === 4 ? 80 : 60);
+
+  // Show loading state while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -292,7 +320,9 @@ const StartScan = () => {
           </p>
           <div className="mt-6">
             <Progress value={progressValue} className="w-full max-w-md mx-auto" />
-            <p className="text-sm text-gray-500 mt-2">Step {step === 4 ? '4' : step} of 5</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Step {isAuthenticated ? (step === 2 ? '1' : step === 4 ? '3' : '2') : (step === 4 ? '4' : step)} of {totalSteps}
+            </p>
           </div>
         </div>
 

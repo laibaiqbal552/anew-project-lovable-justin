@@ -111,6 +111,7 @@ const SocialConnection = () => {
   const [hasRunDetection, setHasRunDetection] = useState(false);
   const [siteUrl, setSiteUrl] = useState<string>('');
   const [bizName, setBizName] = useState<string>('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     checkUserAndBusiness();
@@ -131,6 +132,10 @@ const SocialConnection = () => {
       const registrationData = localStorage.getItem('registrationData');
       const businessWebsiteUrl = localStorage.getItem('businessWebsiteUrl');
       const businessName = localStorage.getItem('businessName');
+
+      if (user) {
+        setIsAuthenticated(true);
+      }
 
       if (error || !user) {
         // Allow access if we have registration data (user is in the middle of the flow)
@@ -715,8 +720,8 @@ const SocialConnection = () => {
             }
           </p>
           <div className="mt-6">
-            <Progress value={60} className="w-full max-w-md mx-auto" />
-            <p className="text-sm text-gray-500 mt-2">Step 3 of 5</p>
+            <Progress value={isAuthenticated ? 50 : 60} className="w-full max-w-md mx-auto" />
+            <p className="text-sm text-gray-500 mt-2">Step {isAuthenticated ? '2' : '3'} of {isAuthenticated ? '4' : '5'}</p>
           </div>
           {isDetecting && (
             <div className="mt-4 flex items-center justify-center gap-2 text-blue-600">
@@ -829,22 +834,22 @@ const SocialConnection = () => {
                                           {profile.username ? `@${profile.username}` : profile.url}
                                           <ExternalLink className="h-3 w-3" />
                                         </a>
-                                        <div className="flex items-center gap-4 text-xs text-gray-600">
-                                          {profile.followers && (
-                                            <span className="flex items-center gap-1">
+                                        <div className="flex flex-col gap-1">
+                                          {profile.followers !== undefined && profile.followers > 0 ? (
+                                            <span className="flex items-center gap-1 font-semibold text-brand-600 text-sm">
+                                              <Users className="h-4 w-4" />
+                                              {profile.followers.toLocaleString()} {profile.platform === 'youtube' ? 'subscribers' : 'followers'}
+                                            </span>
+                                          ) : (
+                                            <span className="flex items-center gap-1 text-gray-500 text-xs">
                                               <Users className="h-3 w-3" />
-                                              {profile.followers.toLocaleString()} followers
+                                              Connect account to see follower count
                                             </span>
                                           )}
-                                          {profile.engagement && (
-                                            <span className="flex items-center gap-1">
+                                          {profile.engagement !== undefined && profile.engagement > 0 && (
+                                            <span className="flex items-center gap-1 text-xs text-gray-600">
                                               <Eye className="h-3 w-3" />
-                                              {profile.engagement}% engagement
-                                            </span>
-                                          )}
-                                          {profile.completeness && (
-                                            <span>
-                                              {profile.completeness}% complete
+                                              {profile.engagement.toFixed(1)}% engagement
                                             </span>
                                           )}
                                         </div>
@@ -859,22 +864,6 @@ const SocialConnection = () => {
                               </CardContent>
                             </Card>
                           ))}
-
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="font-medium text-gray-900 mb-2">Social Media Score: {detectedSocialData.score}/100</h4>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${detectedSocialData.score}%` }}
-                              ></div>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-2">
-                              {detectedSocialData.score >= 75 ? 'Excellent social media presence!' :
-                               detectedSocialData.score >= 50 ? 'Good social media presence with room for improvement.' :
-                               detectedSocialData.score >= 25 ? 'Moderate social media presence. Consider expanding to more platforms.' :
-                               'Limited social media presence. We recommend establishing profiles on major platforms.'}
-                            </p>
-                          </div>
                         </div>
                       ) : (
                         <>

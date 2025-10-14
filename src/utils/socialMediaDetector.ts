@@ -566,16 +566,22 @@ export class SocialMediaDetector {
         .toLowerCase()
         .replace(/^https?:\/\//, '')
         .replace(/^www\./, '')
+        .replace(/^m\./, '') // Remove mobile prefix
         .replace(/\/$/, '')
         .split('?')[0]
         .split('#')[0];
 
-      const key = `${profile.platform}-${normalizedUrl}`;
+      // Use normalized URL as key (not platform + url) to catch cross-platform duplicates
+      const key = normalizedUrl;
 
-      // If this profile already exists, keep the one with better completeness
+      // If this exact URL already exists, keep only one
       if (seen.has(key)) {
         const existing = seen.get(key)!;
-        if ((profile.completeness || 0) > (existing.completeness || 0)) {
+        // Keep the one with more data (higher completeness or with follower count)
+        const existingScore = (existing.completeness || 0) + (existing.followers ? 50 : 0);
+        const newScore = (profile.completeness || 0) + (profile.followers ? 50 : 0);
+
+        if (newScore > existingScore) {
           seen.set(key, profile);
         }
       } else {
@@ -587,36 +593,9 @@ export class SocialMediaDetector {
   }
 
   private async enhanceProfiles(profiles: SocialMediaProfile[]): Promise<SocialMediaProfile[]> {
-    // Enhance profiles with additional data
-    return profiles.map(profile => ({
-      ...profile,
-      engagement: this.calculateEngagementScore(profile),
-      lastPost: this.estimateLastPostDate(profile)
-    }));
-  }
-
-  private calculateEngagementScore(profile: SocialMediaProfile): number {
-    // Simulate engagement scoring based on platform and followers
-    const baseEngagement = Math.random() * 5 + 1; // 1-6%
-    const platformMultiplier = {
-      'instagram': 1.2,
-      'threads': 1.3,
-      'tiktok': 1.5,
-      'facebook': 0.8,
-      'twitter': 1.0,
-      'linkedin': 0.7,
-      'youtube': 1.1
-    };
-
-    return parseFloat((baseEngagement * (platformMultiplier[profile.platform as keyof typeof platformMultiplier] || 1)).toFixed(2));
-  }
-
-  private estimateLastPostDate(_profile: SocialMediaProfile): string {
-    // Simulate last post estimation
-    const daysAgo = Math.floor(Math.random() * 30) + 1;
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    return date.toISOString().split('T')[0];
+    // Return profiles as-is - no random data generation
+    // Engagement and lastPost will only be set if we have real data
+    return profiles;
   }
 
   private calculateOverallScore(profiles: SocialMediaProfile[], websiteQuality?: WebsiteQuality): number {
@@ -728,35 +707,81 @@ export class SocialMediaDetector {
   }
 
   private async enhanceFoundSocialProfiles(profiles: SocialMediaProfile[]): Promise<SocialMediaProfile[]> {
-    // For each found profile, try to get more detailed information
+    // For each found profile, try to get REAL follower counts ONLY
     return Promise.all(profiles.map(async (profile) => {
       try {
-        // Simulate getting more detailed profile info
         const enhancedProfile = { ...profile };
 
-        // Add estimated follower counts based on platform and URL patterns
-        if (!enhancedProfile.followers) {
-          enhancedProfile.followers = this.estimateFollowers(profile.platform, profile.username);
+        // Fetch REAL follower counts from each platform
+        const realData = await this.fetchRealFollowerCount(profile.platform, profile.url);
+
+        if (realData && realData.followers > 0) {
+          // Only use real data if we successfully fetched it
+          enhancedProfile.followers = realData.followers;
+          enhancedProfile.engagement = realData.engagement;
+          enhancedProfile.verified = realData.verified;
+          enhancedProfile.completeness = 90;
+        } else {
+          // DO NOT use mock data - leave as undefined to show "unavailable"
+          enhancedProfile.followers = undefined;
+          enhancedProfile.engagement = undefined;
+          enhancedProfile.verified = false;
+          enhancedProfile.completeness = 70;
         }
-
-        // Add estimated engagement rates
-        if (!enhancedProfile.engagement) {
-          enhancedProfile.engagement = this.estimateEngagement(profile.platform);
-        }
-
-        // Check if profile looks verified (common patterns in username/URL)
-        enhancedProfile.verified = this.checkVerifiedPatterns(profile.url, profile.username);
-
-        // Increase completeness for profiles found on website
-        enhancedProfile.completeness = Math.min(100, (enhancedProfile.completeness || 50) + 20);
 
         return enhancedProfile;
       } catch (error) {
         console.warn(`Failed to enhance profile ${profile.url}:`, error);
+        // Return profile without follower data if enhancement fails
+        profile.followers = undefined;
+        profile.engagement = undefined;
         return profile;
       }
     }));
   }
+
+  private async fetchRealFollowerCount(platform: string, url: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
+    try {
+      console.log(`Fetching real follower count for ${platform}: ${url}`);
+
+      // Call Supabase Edge Function to fetch stats
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.warn('Supabase credentials not configured');
+        return null;
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/fetch-social-stats`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({ platform, url })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          return {
+            followers: result.data.followers || 0,
+            engagement: result.data.engagement || 0,
+            verified: result.data.verified || false
+          };
+        }
+      } else {
+        console.warn(`Failed to fetch stats for ${platform}: ${response.status}`);
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`Error fetching real data for ${platform}:`, error);
+      return null;
+    }
+  }
+
 
   private estimateFollowers(platform: string, username?: string): number {
     // Base follower estimates based on platform
