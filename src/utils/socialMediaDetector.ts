@@ -413,7 +413,7 @@ export class SocialMediaDetector {
 
     console.log('🔍 Starting social media extraction from HTML...');
 
-    // Helper function to normalize URLs for deduplication
+    // Helper function to normalize URLs for deduplication AND storage
     const normalizeForDedup = (url: string): string => {
       return this.normalizeUrl(url)
         .toLowerCase()
@@ -423,6 +423,17 @@ export class SocialMediaDetector {
         .replace(/\/$/, '')
         .split('?')[0]
         .split('#')[0];
+    };
+
+    // Helper function to create clean URL for storage (with https://)
+    const createCleanUrl = (url: string): string => {
+      const normalized = this.normalizeUrl(url)
+        .replace(/^www\./, '')
+        .replace(/^m\./, '')
+        .replace(/\/$/, '')
+        .split('?')[0]
+        .split('#')[0];
+      return normalized;
     };
 
     // STEP 1: Extract ALL href attributes that might contain social media links
@@ -446,11 +457,12 @@ export class SocialMediaDetector {
 
           if (platform) {
             const username = this.extractUsername(url, platform);
-            console.log(`✅ Found ${platform.name} link: ${url} (username: ${username})`);
+            const cleanUrl = createCleanUrl(url);
+            console.log(`✅ Found ${platform.name} link: ${url} → cleaned: ${cleanUrl} (username: ${username})`);
 
             profiles.push({
               platform: platform.name,
-              url: this.normalizeUrl(url),
+              url: cleanUrl,
               username,
               completeness: 70 // Higher confidence for href-extracted links
             });
@@ -470,18 +482,18 @@ export class SocialMediaDetector {
         for (const match of matches) {
           platformMatches++;
           const url = match[0].startsWith('http') ? match[0] : `https://${match[0]}`;
-          const normalizedUrl = this.normalizeUrl(url);
           const normalizedForDedup = normalizeForDedup(url);
 
           if (!foundUrls.has(normalizedForDedup)) {
             foundUrls.add(normalizedForDedup);
             const username = match[1];
+            const cleanUrl = createCleanUrl(url);
 
-            console.log(`✅ Found ${platform.name} via pattern: ${normalizedUrl} (username: ${username})`);
+            console.log(`✅ Found ${platform.name} via pattern: ${url} → cleaned: ${cleanUrl} (username: ${username})`);
 
             profiles.push({
               platform: platform.name,
-              url: normalizedUrl,
+              url: cleanUrl,
               username,
               completeness: 60 // Pattern-matched profiles
             });
