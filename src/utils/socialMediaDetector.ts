@@ -362,7 +362,7 @@ export class SocialMediaDetector {
       console.log(`📄 HTML content length: ${htmlContent.length} characters`);
 
       // STEP 8: Extract social links from the HTML
-      const extractedProfiles = this.extractSocialLinksFromHTML(htmlContent);
+      const extractedProfiles = await this.extractSocialLinksFromHTML(htmlContent);
 
       // STEP 9: If no social links found and the HTML suggests JavaScript rendering, inform the user
       if (extractedProfiles.length === 0) {
@@ -407,11 +407,23 @@ export class SocialMediaDetector {
     return jsFrameworkIndicators.some(pattern => pattern.test(html));
   }
 
-  private extractSocialLinksFromHTML(html: string): SocialMediaProfile[] {
+  private async extractSocialLinksFromHTML(html: string): Promise<SocialMediaProfile[]> {
     const profiles: SocialMediaProfile[] = [];
     const foundUrls = new Set<string>();
 
     console.log('🔍 Starting social media extraction from HTML...');
+
+    // Helper function to normalize URLs for deduplication
+    const normalizeForDedup = (url: string): string => {
+      return this.normalizeUrl(url)
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/^m\./, '')
+        .replace(/\/$/, '')
+        .split('?')[0]
+        .split('#')[0];
+    };
 
     // STEP 1: Extract ALL href attributes that might contain social media links
     const allHrefMatches = html.matchAll(/href=["']([^"']+)["']/gi);
@@ -425,20 +437,24 @@ export class SocialMediaDetector {
       const socialDomains = this.socialPlatforms.flatMap(p => p.domains);
       const containsSocialDomain = socialDomains.some(domain => url.toLowerCase().includes(domain));
 
-      if (containsSocialDomain && !foundUrls.has(url)) {
-        foundUrls.add(url);
-        const platform = this.identifyPlatform(url);
+      if (containsSocialDomain) {
+        const normalizedForDedup = normalizeForDedup(url);
 
-        if (platform) {
-          const username = this.extractUsername(url, platform);
-          console.log(`✅ Found ${platform.name} link: ${url} (username: ${username})`);
+        if (!foundUrls.has(normalizedForDedup)) {
+          foundUrls.add(normalizedForDedup);
+          const platform = this.identifyPlatform(url);
 
-          profiles.push({
-            platform: platform.name,
-            url: this.normalizeUrl(url),
-            username,
-            completeness: 70 // Higher confidence for href-extracted links
-          });
+          if (platform) {
+            const username = this.extractUsername(url, platform);
+            console.log(`✅ Found ${platform.name} link: ${url} (username: ${username})`);
+
+            profiles.push({
+              platform: platform.name,
+              url: this.normalizeUrl(url),
+              username,
+              completeness: 70 // Higher confidence for href-extracted links
+            });
+          }
         }
       }
     }
@@ -455,9 +471,10 @@ export class SocialMediaDetector {
           platformMatches++;
           const url = match[0].startsWith('http') ? match[0] : `https://${match[0]}`;
           const normalizedUrl = this.normalizeUrl(url);
+          const normalizedForDedup = normalizeForDedup(url);
 
-          if (!foundUrls.has(normalizedUrl)) {
-            foundUrls.add(normalizedUrl);
+          if (!foundUrls.has(normalizedForDedup)) {
+            foundUrls.add(normalizedForDedup);
             const username = match[1];
 
             console.log(`✅ Found ${platform.name} via pattern: ${normalizedUrl} (username: ${username})`);
@@ -477,8 +494,25 @@ export class SocialMediaDetector {
       });
     });
 
-    // STEP 3: Filter out non-profile or tracking URLs
-    const filtered = profiles.filter(p => {
+    // STEP 3: Resolve Facebook share links to actual profile URLs
+    const resolvedProfiles = await Promise.all(
+      profiles.map(async (p) => {
+        if (p.platform === 'facebook' && p.url.includes('/share/')) {
+          console.log(`🔄 Detected Facebook share link: ${p.url}`);
+          const resolvedUrl = await this.resolveFacebookShareLink(p.url);
+          if (resolvedUrl) {
+            console.log(`✅ Resolved to profile: ${resolvedUrl}`);
+            return { ...p, url: resolvedUrl };
+          } else {
+            console.log(`⚠️ Could not resolve Facebook share link: ${p.url}`);
+          }
+        }
+        return p;
+      })
+    );
+
+    // STEP 4: Filter out non-profile or tracking URLs
+    const filtered = resolvedProfiles.filter(p => {
       const isProfile = this.isLikelyProfileUrl(p.platform, p.url, p.username);
       if (!isProfile) {
         console.log(`❌ Filtered out non-profile URL: ${p.url}`);
@@ -553,15 +587,21 @@ export class SocialMediaDetector {
   // Heuristic filter to exclude non-profile and tracking URLs
   private isLikelyProfileUrl(platform: string, url: string, username?: string): boolean {
     const u = url.toLowerCase();
+
+    // Platform-specific checks FIRST (before general banned list)
+    if (platform === 'facebook') {
+      // Allow profile.php URLs (these are valid Facebook profile URLs with numeric IDs)
+      if (u.includes('profile.php?id=')) return true;
+      // Block Facebook-specific non-profile URLs
+      if (u.includes('facebook.com/') && (u.endsWith('/tr') || u.includes('/events/'))) return false;
+    }
+
+    // General banned patterns (but already checked platform-specific exceptions above)
     const banned = [
       '/tr', '/watch', '/embed', '/intent', '/share', '/sharer.php', 'sharer.php',
       '/oauth', '/dialog', '/plugins/', '/shorts', '/hashtag', '/home', '/i/', '/privacy', '/help'
     ];
     if (banned.some(b => u.includes(b))) return false;
-
-    if (platform === 'facebook') {
-      if (u.includes('facebook.com/') && (u.endsWith('/tr') || u.includes('/events/'))) return false;
-    }
     if (platform === 'youtube') {
       if (u.includes('youtube.com/watch') || u.includes('youtube.com/embed')) return false;
     }
@@ -585,6 +625,65 @@ export class SocialMediaDetector {
     } catch {}
 
     return true;
+  }
+
+  /**
+   * Resolves Facebook share links to actual profile URLs
+   * Facebook /share/ links redirect to the actual profile/page
+   */
+  private async resolveFacebookShareLink(shareUrl: string): Promise<string | null> {
+    try {
+      // Try to get the redirect location without following it
+      const response = await fetch(shareUrl, {
+        method: 'HEAD',
+        redirect: 'manual', // Don't follow redirects automatically
+        signal: AbortSignal.timeout(5000)
+      });
+
+      // Check if there's a Location header (redirect)
+      const location = response.headers.get('Location');
+      if (location) {
+        // Extract the profile URL from the redirect
+        // Facebook redirects to: https://www.facebook.com/profile.php?id=XXXXX or https://www.facebook.com/pagename
+        const profileUrl = new URL(location);
+
+        // Clean up the URL - keep only the essential parts
+        if (profileUrl.pathname.includes('profile.php')) {
+          const profileId = profileUrl.searchParams.get('id');
+          if (profileId) {
+            return `https://www.facebook.com/profile.php?id=${profileId}`;
+          }
+        } else {
+          // Regular page URL
+          return `https://www.facebook.com${profileUrl.pathname}`;
+        }
+      }
+
+      // If no redirect found, try a regular fetch to see if JavaScript redirects
+      const fullResponse = await fetch(shareUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (fullResponse.redirected && fullResponse.url) {
+        const profileUrl = new URL(fullResponse.url);
+        if (profileUrl.pathname.includes('profile.php')) {
+          const profileId = profileUrl.searchParams.get('id');
+          if (profileId) {
+            return `https://www.facebook.com/profile.php?id=${profileId}`;
+          }
+        } else if (profileUrl.hostname === 'www.facebook.com' || profileUrl.hostname === 'facebook.com') {
+          return `https://www.facebook.com${profileUrl.pathname}`;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('Failed to resolve Facebook share link:', error);
+      return null;
+    }
   }
 
   private removeDuplicates(profiles: SocialMediaProfile[]): SocialMediaProfile[] {

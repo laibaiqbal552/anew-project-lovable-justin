@@ -4,7 +4,12 @@
       "Bash(npm run build:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(curl -s \"https://hugeicons.com\")"
+      "Bash(curl -s \"https://hugeicons.com\")",
+      "Bash(curl -s \"https://mypethub.it/\")",
+      "Bash(node test-mypethub-detection.js)",
+      "Bash(move test-mypethub-detection.js test-mypethub-detection.cjs)",
+      "Bash(node test-mypethub-detection.cjs)",
+      "Bash(curl -sI \"https://www.facebook.com/share/1HKUQhBdSr/\")"
     ],
     "deny": [],
     "ask": []
