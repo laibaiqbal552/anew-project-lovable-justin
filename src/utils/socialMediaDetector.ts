@@ -813,42 +813,277 @@ export class SocialMediaDetector {
 
   private async fetchRealFollowerCount(platform: string, url: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
     try {
-      console.log(`Fetching real follower count for ${platform}: ${url}`);
+      console.log(`📊 Fetching real follower count for ${platform}: ${url}`);
 
-      // Call Supabase Edge Function to fetch stats
+      // METHOD 1: Try RapidAPI Social Media Stats APIs (multiple options)
+      const rapidApiKey = import.meta.env.VITE_RAPIDAPI_KEY;
+      if (rapidApiKey) {
+        const stats = await this.fetchFromRapidAPI(platform, url, rapidApiKey);
+        if (stats) {
+          console.log(`✅ Got stats from RapidAPI: ${stats.followers} followers`);
+          return stats;
+        }
+      }
+
+      // METHOD 2: Try YouTube API directly (for YouTube only)
+      if (platform === 'youtube') {
+        const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+        if (youtubeApiKey) {
+          const stats = await this.fetchYouTubeStats(url, youtubeApiKey);
+          if (stats) {
+            console.log(`✅ Got YouTube stats from YouTube API: ${stats.followers} subscribers`);
+            return stats;
+          }
+        }
+      }
+
+      // METHOD 3: Try scraping the profile page directly
+      const scrapedStats = await this.scrapeProfileStats(platform, url);
+      if (scrapedStats) {
+        console.log(`✅ Got stats from scraping: ${scrapedStats.followers} followers`);
+        return scrapedStats;
+      }
+
+      // METHOD 4: Try Supabase Edge Function (fallback)
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      if (!supabaseUrl || !supabaseAnonKey) {
-        console.warn('Supabase credentials not configured');
-        return null;
+      if (supabaseUrl && supabaseAnonKey) {
+        const response = await fetch(`${supabaseUrl}/functions/v1/fetch-social-stats`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({ platform, url }),
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            console.log(`✅ Got stats from Supabase: ${result.data.followers} followers`);
+            return {
+              followers: result.data.followers || 0,
+              engagement: result.data.engagement || 0,
+              verified: result.data.verified || false
+            };
+          }
+        }
       }
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/fetch-social-stats`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-        },
-        body: JSON.stringify({ platform, url })
-      });
+      console.warn(`⚠️ Could not fetch stats for ${platform} - all methods failed`);
+      return null;
+    } catch (error) {
+      console.error(`❌ Error fetching real data for ${platform}:`, error);
+      return null;
+    }
+  }
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          return {
-            followers: result.data.followers || 0,
-            engagement: result.data.engagement || 0,
-            verified: result.data.verified || false
-          };
+  /**
+   * Fetch social media stats from RapidAPI
+   * Multiple RapidAPI services available for different platforms
+   */
+  private async fetchFromRapidAPI(platform: string, url: string, apiKey: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
+    try {
+      // Different RapidAPI endpoints for different platforms
+      if (platform === 'instagram') {
+        // Instagram Profile API on RapidAPI
+        const username = url.split('/').filter(Boolean).pop();
+        const response = await fetch(`https://instagram-scraper-api2.p.rapidapi.com/v1/info?username_or_id_or_url=${username}`, {
+          headers: {
+            'X-RapidAPI-Key': apiKey,
+            'X-RapidAPI-Host': 'instagram-scraper-api2.p.rapidapi.com'
+          },
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data) {
+            return {
+              followers: data.data.follower_count || 0,
+              engagement: 0,
+              verified: data.data.is_verified || false
+            };
+          }
         }
-      } else {
-        console.warn(`Failed to fetch stats for ${platform}: ${response.status}`);
+      } else if (platform === 'twitter' || platform === 'x') {
+        // Twitter/X API on RapidAPI
+        const username = url.split('/').filter(Boolean).pop();
+        const response = await fetch(`https://twitter154.p.rapidapi.com/user/details?username=${username}`, {
+          headers: {
+            'X-RapidAPI-Key': apiKey,
+            'X-RapidAPI-Host': 'twitter154.p.rapidapi.com'
+          },
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.followers_count) {
+            return {
+              followers: data.followers_count || 0,
+              engagement: 0,
+              verified: data.is_blue_verified || false
+            };
+          }
+        }
+      } else if (platform === 'tiktok') {
+        // TikTok API on RapidAPI
+        const username = url.split('@').pop()?.split('/')[0];
+        const response = await fetch(`https://tiktok-scraper7.p.rapidapi.com/user/info?unique_id=${username}`, {
+          headers: {
+            'X-RapidAPI-Key': apiKey,
+            'X-RapidAPI-Host': 'tiktok-scraper7.p.rapidapi.com'
+          },
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data?.user) {
+            return {
+              followers: data.data.user.followerCount || 0,
+              engagement: 0,
+              verified: data.data.user.verified || false
+            };
+          }
+        }
       }
 
       return null;
     } catch (error) {
-      console.error(`Error fetching real data for ${platform}:`, error);
+      console.warn(`⚠️ RapidAPI fetch failed for ${platform}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch YouTube stats using YouTube Data API v3
+   */
+  private async fetchYouTubeStats(url: string, apiKey: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
+    try {
+      // Extract channel ID or username from URL
+      let channelId = '';
+
+      if (url.includes('/channel/')) {
+        channelId = url.split('/channel/')[1].split('/')[0].split('?')[0];
+      } else if (url.includes('/@')) {
+        // Need to resolve @username to channel ID first
+        const username = url.split('/@')[1].split('/')[0].split('?')[0];
+        const searchResponse = await fetch(
+          `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${username}&key=${apiKey}`,
+          { signal: AbortSignal.timeout(10000) }
+        );
+
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          if (searchData.items && searchData.items.length > 0) {
+            channelId = searchData.items[0].id;
+          }
+        }
+      }
+
+      if (!channelId) return null;
+
+      // Fetch channel statistics
+      const response = await fetch(
+        `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}&key=${apiKey}`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.items && data.items.length > 0) {
+          const stats = data.items[0].statistics;
+          return {
+            followers: parseInt(stats.subscriberCount) || 0,
+            engagement: 0,
+            verified: false
+          };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('⚠️ YouTube API fetch failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Scrape profile page for follower count (last resort)
+   * This method tries to extract follower counts from the HTML
+   */
+  private async scrapeProfileStats(platform: string, url: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
+    try {
+      // Try to fetch the profile page
+      let html = '';
+
+      // Try direct fetch first
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          },
+          signal: AbortSignal.timeout(10000)
+        });
+        if (response.ok) {
+          html = await response.text();
+        }
+      } catch (error) {
+        // Direct fetch failed, try CORS proxy
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const proxyResponse = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+        if (proxyResponse.ok) {
+          html = await proxyResponse.text();
+        }
+      }
+
+      if (!html || html.length < 100) return null;
+
+      // Platform-specific scraping patterns
+      let followers = 0;
+
+      if (platform === 'instagram') {
+        // Look for follower count in Instagram HTML/metadata
+        const match = html.match(/"edge_followed_by":\s*{\s*"count":\s*(\d+)/);
+        if (match) followers = parseInt(match[1]);
+      } else if (platform === 'twitter' || platform === 'x') {
+        // Look for follower count in Twitter HTML
+        const match = html.match(/"followers_count":(\d+)/);
+        if (match) followers = parseInt(match[1]);
+      } else if (platform === 'linkedin') {
+        // Look for follower count in LinkedIn
+        const match = html.match(/(\d+(?:,\d+)*)\s+followers/i);
+        if (match) followers = parseInt(match[1].replace(/,/g, ''));
+      } else if (platform === 'facebook') {
+        // Look for like count on Facebook pages
+        const match = html.match(/(\d+(?:,\d+)*(?:\.\d+)?[KkMm]?)\s+(?:likes|followers)/i);
+        if (match) {
+          const count = match[1].toLowerCase();
+          if (count.includes('k')) {
+            followers = Math.floor(parseFloat(count) * 1000);
+          } else if (count.includes('m')) {
+            followers = Math.floor(parseFloat(count) * 1000000);
+          } else {
+            followers = parseInt(count.replace(/,/g, ''));
+          }
+        }
+      }
+
+      if (followers > 0) {
+        return {
+          followers,
+          engagement: 0,
+          verified: false
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.warn(`⚠️ Profile scraping failed for ${platform}:`, error);
       return null;
     }
   }
