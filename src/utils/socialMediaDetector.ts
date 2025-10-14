@@ -31,68 +31,81 @@ export interface SocialMediaData {
 
 export class SocialMediaDetector {
   private readonly socialPlatforms = [
-    {
-      name: 'facebook',
-      domains: ['facebook.com', 'fb.com'],
-      patterns: [
-        /(?:https?:\/\/)?(?:www\.)?(?:facebook|fb)\.com\/([a-zA-Z0-9._-]+)/gi,
-        /(?:https?:\/\/)?(?:m\.)?facebook\.com\/([a-zA-Z0-9._-]+)/gi
-      ],
-      baseScore: 25
-    },
-    {
-      name: 'instagram',
-      domains: ['instagram.com'],
-      patterns: [
-        /(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9._-]+)/gi,
-        /(?:https?:\/\/)?(?:m\.)?instagram\.com\/([a-zA-Z0-9._-]+)/gi
-      ],
-      baseScore: 20
-    },
-    {
-      name: 'threads',
-      domains: ['threads.net'],
-      patterns: [
-        /(?:https?:\/\/)?(?:www\.)?threads\.net\/@([a-zA-Z0-9._-]+)/gi,
-        /(?:https?:\/\/)?(?:www\.)?threads\.net\/([a-zA-Z0-9._-]+)/gi
-      ],
-      baseScore: 15
-    },
-    {
-      name: 'twitter',
-      domains: ['twitter.com', 'x.com'],
-      patterns: [
-        /(?:https?:\/\/)?(?:www\.)?(?:twitter|x)\.com\/([a-zA-Z0-9._-]+)/gi,
-        /(?:https?:\/\/)?(?:mobile\.)?twitter\.com\/([a-zA-Z0-9._-]+)/gi
-      ],
-      baseScore: 20
-    },
-    {
-      name: 'linkedin',
-      domains: ['linkedin.com'],
-      patterns: [
-        /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/company\/([a-zA-Z0-9._-]+)/gi,
-        /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9._-]+)/gi
-      ],
-      baseScore: 15
-    },
-    {
-      name: 'youtube',
-      domains: ['youtube.com'],
-      patterns: [
-        /(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:c\/|channel\/|user\/|@)([a-zA-Z0-9._-]+)/gi,
-        /(?:https?:\/\/)?(?:www\.)?youtube\.com\/([a-zA-Z0-9._-]+)/gi
-      ],
-      baseScore: 15
-    },
-    {
-      name: 'tiktok',
-      domains: ['tiktok.com'],
-      patterns: [
-        /(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([a-zA-Z0-9._-]+)/gi
-      ],
-      baseScore: 10
-    }
+    // 🧠 General Social Networks
+    { name: 'facebook', domains: ['facebook.com', 'fb.com'], patterns: [/(?:https?:\/\/)?(?:www\.|m\.)?(?:facebook|fb)\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 25 },
+    { name: 'instagram', domains: ['instagram.com'], patterns: [/(?:https?:\/\/)?(?:www\.|m\.)?instagram\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 20 },
+    { name: 'twitter', domains: ['twitter.com', 'x.com'], patterns: [/(?:https?:\/\/)?(?:www\.|mobile\.)?(?:twitter|x)\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 20 },
+    { name: 'tiktok', domains: ['tiktok.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([a-zA-Z0-9._-]+)/gi], baseScore: 18 },
+    { name: 'snapchat', domains: ['snapchat.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?snapchat\.com\/add\/([a-zA-Z0-9._-]+)/gi], baseScore: 12 },
+    { name: 'pinterest', domains: ['pinterest.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?pinterest\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 15 },
+    { name: 'linkedin', domains: ['linkedin.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/(?:company|in)\/([a-zA-Z0-9._-]+)/gi], baseScore: 15 },
+    { name: 'reddit', domains: ['reddit.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?reddit\.com\/(?:r|user)\/([a-zA-Z0-9._-]+)/gi], baseScore: 12 },
+    { name: 'threads', domains: ['threads.net'], patterns: [/(?:https?:\/\/)?(?:www\.)?threads\.net\/@?([a-zA-Z0-9._-]+)/gi], baseScore: 15 },
+    { name: 'tumblr', domains: ['tumblr.com'], patterns: [/(?:https?:\/\/)?([a-zA-Z0-9._-]+)\.tumblr\.com/gi], baseScore: 10 },
+
+    // 💬 Messaging & Communication Platforms
+    { name: 'whatsapp', domains: ['wa.me', 'whatsapp.com'], patterns: [/(?:https?:\/\/)?(?:wa\.me|api\.whatsapp\.com)\/([0-9]+)/gi], baseScore: 8 },
+    { name: 'telegram', domains: ['t.me', 'telegram.me'], patterns: [/(?:https?:\/\/)?(?:t\.me|telegram\.me)\/([a-zA-Z0-9._-]+)/gi], baseScore: 10 },
+    { name: 'discord', domains: ['discord.gg', 'discord.com'], patterns: [/(?:https?:\/\/)?(?:discord\.gg|discord\.com\/invite)\/([a-zA-Z0-9]+)/gi], baseScore: 12 },
+    { name: 'signal', domains: ['signal.group'], patterns: [/(?:https?:\/\/)?signal\.group\/([a-zA-Z0-9_-]+)/gi], baseScore: 7 },
+    { name: 'viber', domains: ['viber.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?viber\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 6 },
+    { name: 'wechat', domains: ['weixin.qq.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?weixin\.qq\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 8 },
+    { name: 'line', domains: ['line.me'], patterns: [/(?:https?:\/\/)?line\.me\/([a-zA-Z0-9._-]+)/gi], baseScore: 7 },
+    { name: 'skype', domains: ['skype.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?skype\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 6 },
+
+    // 🎥 Video & Streaming Platforms
+    { name: 'youtube', domains: ['youtube.com', 'youtu.be'], patterns: [/(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:c\/|channel\/|user\/|@)([a-zA-Z0-9._-]+)/gi], baseScore: 15 },
+    { name: 'twitch', domains: ['twitch.tv'], patterns: [/(?:https?:\/\/)?(?:www\.)?twitch\.tv\/([a-zA-Z0-9._-]+)/gi], baseScore: 14 },
+    { name: 'vimeo', domains: ['vimeo.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?vimeo\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 10 },
+    { name: 'dailymotion', domains: ['dailymotion.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?dailymotion\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 8 },
+    { name: 'rumble', domains: ['rumble.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?rumble\.com\/(?:c|user)\/([a-zA-Z0-9._-]+)/gi], baseScore: 9 },
+    { name: 'bilibili', domains: ['bilibili.com', 'space.bilibili.com'], patterns: [/(?:https?:\/\/)?space\.bilibili\.com\/([0-9]+)/gi], baseScore: 8 },
+    { name: 'trovo', domains: ['trovo.live'], patterns: [/(?:https?:\/\/)?(?:www\.)?trovo\.live\/([a-zA-Z0-9._-]+)/gi], baseScore: 7 },
+
+    // 🎶 Music & Audio Sharing Platforms
+    { name: 'soundcloud', domains: ['soundcloud.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?soundcloud\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 12 },
+    { name: 'spotify', domains: ['spotify.com'], patterns: [/(?:https?:\/\/)?open\.spotify\.com\/(?:user|artist)\/([a-zA-Z0-9]+)/gi], baseScore: 12 },
+    { name: 'audiomack', domains: ['audiomack.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?audiomack\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 8 },
+    { name: 'mixcloud', domains: ['mixcloud.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?mixcloud\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 9 },
+    { name: 'bandcamp', domains: ['bandcamp.com'], patterns: [/(?:https?:\/\/)?([a-zA-Z0-9._-]+)\.bandcamp\.com/gi], baseScore: 10 },
+    { name: 'reverbnation', domains: ['reverbnation.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?reverbnation\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 7 },
+    { name: 'lastfm', domains: ['last.fm'], patterns: [/(?:https?:\/\/)?(?:www\.)?last\.fm\/user\/([a-zA-Z0-9._-]+)/gi], baseScore: 8 },
+
+    // 🧑‍💻 Developer & Tech Communities
+    { name: 'github', domains: ['github.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 14 },
+    { name: 'gitlab', domains: ['gitlab.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?gitlab\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 12 },
+    { name: 'stackoverflow', domains: ['stackoverflow.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?stackoverflow\.com\/users\/([0-9]+)/gi], baseScore: 10 },
+    { name: 'devto', domains: ['dev.to'], patterns: [/(?:https?:\/\/)?dev\.to\/([a-zA-Z0-9._-]+)/gi], baseScore: 11 },
+    { name: 'hashnode', domains: ['hashnode.com'], patterns: [/(?:https?:\/\/)?([a-zA-Z0-9._-]+)\.hashnode\.dev/gi], baseScore: 9 },
+    { name: 'codepen', domains: ['codepen.io'], patterns: [/(?:https?:\/\/)?codepen\.io\/([a-zA-Z0-9._-]+)/gi], baseScore: 10 },
+    { name: 'behance', domains: ['behance.net'], patterns: [/(?:https?:\/\/)?(?:www\.)?behance\.net\/([a-zA-Z0-9._-]+)/gi], baseScore: 11 },
+    { name: 'dribbble', domains: ['dribbble.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?dribbble\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 11 },
+    { name: 'producthunt', domains: ['producthunt.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?producthunt\.com\/@([a-zA-Z0-9._-]+)/gi], baseScore: 9 },
+    { name: 'indiehackers', domains: ['indiehackers.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?indiehackers\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 8 },
+
+    // 📷 Photography & Design Networks
+    { name: 'flickr', domains: ['flickr.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?flickr\.com\/(?:people|photos)\/([a-zA-Z0-9@._-]+)/gi], baseScore: 9 },
+    { name: '500px', domains: ['500px.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?500px\.com\/(?:p\/)?([a-zA-Z0-9._-]+)/gi], baseScore: 10 },
+    { name: 'deviantart', domains: ['deviantart.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9._-]+)\.deviantart\.com/gi], baseScore: 9 },
+    { name: 'artstation', domains: ['artstation.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?artstation\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 10 },
+    { name: 'unsplash', domains: ['unsplash.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?unsplash\.com\/@([a-zA-Z0-9._-]+)/gi], baseScore: 9 },
+    { name: 'vsco', domains: ['vsco.co'], patterns: [/(?:https?:\/\/)?(?:www\.)?vsco\.co\/([a-zA-Z0-9._-]+)/gi], baseScore: 8 },
+
+    // 📰 Blogging & Writing Platforms
+    { name: 'medium', domains: ['medium.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?medium\.com\/@([a-zA-Z0-9._-]+)/gi], baseScore: 13 },
+    { name: 'substack', domains: ['substack.com'], patterns: [/(?:https?:\/\/)?([a-zA-Z0-9._-]+)\.substack\.com/gi], baseScore: 12 },
+    { name: 'wordpress', domains: ['wordpress.com'], patterns: [/(?:https?:\/\/)?([a-zA-Z0-9._-]+)\.wordpress\.com/gi], baseScore: 10 },
+    { name: 'blogger', domains: ['blogger.com', 'blogspot.com'], patterns: [/(?:https?:\/\/)?([a-zA-Z0-9._-]+)\.blogspot\.com/gi], baseScore: 8 },
+    { name: 'ghost', domains: ['ghost.io'], patterns: [/(?:https?:\/\/)?([a-zA-Z0-9._-]+)\.ghost\.io/gi], baseScore: 9 },
+    { name: 'wattpad', domains: ['wattpad.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?wattpad\.com\/user\/([a-zA-Z0-9._-]+)/gi], baseScore: 7 },
+    { name: 'quora', domains: ['quora.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?quora\.com\/profile\/([a-zA-Z0-9._-]+)/gi], baseScore: 10 },
+
+    // 🧩 Community & Forums
+    { name: 'discourse', domains: ['discourse.org'], patterns: [/(?:https?:\/\/)?([a-zA-Z0-9._-]+)\.discourse\.org/gi], baseScore: 7 },
+    { name: 'slack', domains: ['slack.com'], patterns: [/(?:https?:\/\/)?([a-zA-Z0-9._-]+)\.slack\.com/gi], baseScore: 8 },
+    { name: 'patreon', domains: ['patreon.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?patreon\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 11 },
+    { name: 'kofi', domains: ['ko-fi.com'], patterns: [/(?:https?:\/\/)?ko-fi\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 9 },
+    { name: 'buymeacoffee', domains: ['buymeacoffee.com'], patterns: [/(?:https?:\/\/)?(?:www\.)?buymeacoffee\.com\/([a-zA-Z0-9._-]+)/gi], baseScore: 9 }
   ];
 
   async detectSocialMedia(websiteUrl: string, businessName?: string): Promise<SocialMediaData> {
@@ -158,128 +171,212 @@ export class SocialMediaDetector {
       let htmlContent = '';
       let fetchMethod = '';
 
-      // STEP 1: Try Supabase Edge Function with rendering support (best for JavaScript sites)
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      // STEP 1: Try direct fetch first (fastest, works for static sites)
+      try {
+        console.log('📡 Attempting direct fetch...');
+        const directResponse = await fetch(websiteUrl, {
+          mode: 'cors',
+          headers: {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          },
+          signal: AbortSignal.timeout(10000)
+        });
 
-      if (supabaseUrl && supabaseAnonKey) {
-        try {
-          console.log('📡 Trying Supabase Edge Function with rendering support...');
-          const response = await fetch(`${supabaseUrl}/functions/v1/fetch-rendered-html`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabaseAnonKey}`,
-            },
-            body: JSON.stringify({ url: websiteUrl }),
-            signal: AbortSignal.timeout(30000) // 30 second timeout for rendering
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.html) {
-              htmlContent = result.html;
-              fetchMethod = `Edge Function (${result.method})`;
-              console.log(`✅ Edge Function succeeded using: ${result.method}`);
-              console.log(`📄 HTML content length: ${htmlContent.length} characters`);
-            }
-          } else {
-            console.warn(`⚠️ Edge Function failed with status: ${response.status}`);
-          }
-        } catch (edgeError: any) {
-          console.warn('⚠️ Edge Function failed:', edgeError.message);
+        if (directResponse.ok) {
+          htmlContent = await directResponse.text();
+          fetchMethod = 'Direct fetch';
+          console.log(`✅ Direct fetch succeeded! HTML length: ${htmlContent.length}`);
+        } else {
+          console.warn(`⚠️ Direct fetch failed with status: ${directResponse.status}`);
         }
+      } catch (directError: any) {
+        console.warn('⚠️ Direct fetch failed (expected for CORS-restricted sites):', directError.message);
       }
 
-      // STEP 2: Try direct fetch as fallback (fastest, works for sites with proper CORS headers)
+      // STEP 2: Try public CORS proxies (works for most sites)
       if (!htmlContent) {
-        try {
-          console.log('📡 Attempting direct fetch...');
-          const directResponse = await fetch(websiteUrl, {
-            mode: 'cors',
-            headers: {
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            },
-            signal: AbortSignal.timeout(10000)
-          });
-
-          if (directResponse.ok) {
-            htmlContent = await directResponse.text();
-            fetchMethod = 'Direct fetch';
-            console.log(`✅ Direct fetch succeeded! HTML length: ${htmlContent.length}`);
-          } else {
-            console.warn(`⚠️ Direct fetch failed with status: ${directResponse.status}`);
-          }
-        } catch (directError: any) {
-          console.warn('⚠️ Direct fetch failed (expected for CORS-restricted sites):', directError.message);
-        }
-      }
-
-      // STEP 3: If direct fetch failed, try CORS proxies
-      if (!htmlContent) {
-        console.log('🔄 Trying CORS proxy services...');
+        console.log('🔄 Trying public CORS proxy services...');
         const proxies = [
-          { name: 'corsproxy.io', url: `https://corsproxy.io/?${encodeURIComponent(websiteUrl)}` },
-          { name: 'api.codetabs.com', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(websiteUrl)}` },
-          { name: 'allorigins.win', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(websiteUrl)}` }
+          { name: 'AllOrigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(websiteUrl)}` },
+          { name: 'ThingProxy', url: `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(websiteUrl)}` },
+          { name: 'CORS.SH', url: `https://cors.sh/${websiteUrl}`, headers: { 'x-cors-api-key': 'temp_demo' } },
+          { name: 'Corsproxy.io', url: `https://corsproxy.io/?${encodeURIComponent(websiteUrl)}` },
+          { name: 'CodeTabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(websiteUrl)}` }
         ];
 
         for (const proxy of proxies) {
           try {
-            console.log(`📡 Trying proxy: ${proxy.name}...`);
+            console.log(`📡 Trying ${proxy.name}...`);
             const response = await fetch(proxy.url, {
               headers: {
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                ...(proxy.headers || {})
               },
               signal: AbortSignal.timeout(15000)
             });
 
             if (response.ok) {
               const data = await response.text();
-              if (data && data.length > 100) { // Ensure we got meaningful content
+              if (data && data.length > 100) {
                 htmlContent = data;
                 fetchMethod = `CORS proxy (${proxy.name})`;
-                console.log(`✅ Proxy ${proxy.name} succeeded! HTML length: ${htmlContent.length}`);
+                console.log(`✅ ${proxy.name} succeeded! HTML length: ${htmlContent.length}`);
                 break;
               } else {
-                console.warn(`⚠️ Proxy ${proxy.name} returned minimal content`);
+                console.warn(`⚠️ ${proxy.name} returned minimal content`);
               }
             } else {
-              console.warn(`⚠️ Proxy ${proxy.name} failed with status: ${response.status}`);
+              console.warn(`⚠️ ${proxy.name} failed with status: ${response.status}`);
             }
           } catch (proxyError: any) {
-            console.warn(`❌ Proxy ${proxy.name} error:`, proxyError.message);
+            console.warn(`❌ ${proxy.name} error:`, proxyError.message);
             continue;
           }
         }
       }
 
-      // STEP 4: Check if we got any content
+      // STEP 3: Try web scraping APIs (for JavaScript-rendered sites)
+      if (!htmlContent) {
+        console.log('🔄 Trying web scraping APIs for JavaScript rendering...');
+
+        // Try ScraperAPI (free tier available)
+        try {
+          console.log('📡 Trying ScraperAPI...');
+          const scraperApiKey = import.meta.env.VITE_SCRAPERAPI_KEY;
+          if (scraperApiKey) {
+            const scraperUrl = `https://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(websiteUrl)}&render=true`;
+            const response = await fetch(scraperUrl, { signal: AbortSignal.timeout(30000) });
+            if (response.ok) {
+              htmlContent = await response.text();
+              fetchMethod = 'ScraperAPI (JavaScript rendered)';
+              console.log(`✅ ScraperAPI succeeded! HTML length: ${htmlContent.length}`);
+            }
+          }
+        } catch (error: any) {
+          console.warn('⚠️ ScraperAPI failed:', error.message);
+        }
+      }
+
+      // STEP 4: Try ScrapingBee (alternative scraping service)
+      if (!htmlContent) {
+        try {
+          console.log('📡 Trying ScrapingBee...');
+          const scrapingBeeKey = import.meta.env.VITE_SCRAPINGBEE_API_KEY;
+          if (scrapingBeeKey) {
+            const scrapingBeeUrl = `https://app.scrapingbee.com/api/v1/?api_key=${scrapingBeeKey}&url=${encodeURIComponent(websiteUrl)}&render_js=true`;
+            const response = await fetch(scrapingBeeUrl, { signal: AbortSignal.timeout(30000) });
+            if (response.ok) {
+              htmlContent = await response.text();
+              fetchMethod = 'ScrapingBee (JavaScript rendered)';
+              console.log(`✅ ScrapingBee succeeded! HTML length: ${htmlContent.length}`);
+            }
+          }
+        } catch (error: any) {
+          console.warn('⚠️ ScrapingBee failed:', error.message);
+        }
+      }
+
+      // STEP 5: Try Supabase Edge Function (if available)
+      if (!htmlContent) {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        if (supabaseUrl && supabaseAnonKey) {
+          try {
+            console.log('📡 Trying Supabase Edge Function...');
+            const response = await fetch(`${supabaseUrl}/functions/v1/fetch-rendered-html`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({ url: websiteUrl }),
+              signal: AbortSignal.timeout(30000)
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success && result.html) {
+                htmlContent = result.html;
+                fetchMethod = `Supabase Edge Function (${result.method})`;
+                console.log(`✅ Supabase Edge Function succeeded`);
+              }
+            }
+          } catch (edgeError: any) {
+            console.warn('⚠️ Supabase Edge Function failed:', edgeError.message);
+          }
+        }
+      }
+
+      // STEP 6: Try RapidAPI web scraping services
+      if (!htmlContent) {
+        try {
+          console.log('📡 Trying RapidAPI web scraper...');
+          const rapidApiKey = import.meta.env.VITE_RAPIDAPI_KEY;
+          if (rapidApiKey) {
+            const response = await fetch('https://web-scraping-api1.p.rapidapi.com/v1/scrape', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-RapidAPI-Key': rapidApiKey,
+                'X-RapidAPI-Host': 'web-scraping-api1.p.rapidapi.com'
+              },
+              body: JSON.stringify({
+                url: websiteUrl,
+                render_js: true
+              }),
+              signal: AbortSignal.timeout(30000)
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              if (result.html) {
+                htmlContent = result.html;
+                fetchMethod = 'RapidAPI Web Scraper (JavaScript rendered)';
+                console.log(`✅ RapidAPI succeeded! HTML length: ${htmlContent.length}`);
+              }
+            }
+          }
+        } catch (error: any) {
+          console.warn('⚠️ RapidAPI failed:', error.message);
+        }
+      }
+
+      // STEP 7: Check if we got any content
       if (!htmlContent || htmlContent.length < 100) {
         console.error('❌ Failed to fetch website HTML');
         console.error('   Website:', websiteUrl);
-        console.error('   All methods failed (Edge Function + direct + 3 CORS proxies)');
-        console.error('   This website may be blocking automated access or have strict CORS policies');
+        console.error('   All methods failed:');
+        console.error('   ✗ Direct fetch');
+        console.error('   ✗ 5 CORS proxy services');
+        console.error('   ✗ ScraperAPI');
+        console.error('   ✗ ScrapingBee');
+        console.error('   ✗ Supabase Edge Function');
+        console.error('   ✗ RapidAPI Web Scraper');
+        console.error('   This website may be blocking automated access or have strict CORS/bot protection');
         return [];
       }
 
       console.log(`✅ Successfully fetched website HTML using: ${fetchMethod}`);
-      if (!fetchMethod.includes('Edge Function')) {
-        console.log(`📄 HTML content length: ${htmlContent.length} characters`);
-      }
+      console.log(`📄 HTML content length: ${htmlContent.length} characters`);
 
-      // STEP 5: Extract social links from the HTML
+      // STEP 8: Extract social links from the HTML
       const extractedProfiles = this.extractSocialLinksFromHTML(htmlContent);
 
-      // STEP 6: If no social links found and the HTML suggests JavaScript rendering, inform the user
+      // STEP 9: If no social links found and the HTML suggests JavaScript rendering, inform the user
       if (extractedProfiles.length === 0) {
         const isJavaScriptSite = this.detectJavaScriptRenderedSite(htmlContent);
         if (isJavaScriptSite) {
           console.warn('⚠️ This website appears to use JavaScript rendering (React/Next.js/Vue)');
           console.warn('   Social media links may be added dynamically after page load');
           console.warn('   The initial HTML does not contain social media links');
-          console.warn('   SOLUTION 1: Deploy the "fetch-rendered-html" Edge Function for JavaScript rendering support');
-          console.warn('   SOLUTION 2: Manually add your social media URLs on the social connection page');
+          console.warn('   💡 SOLUTIONS:');
+          console.warn('   1. Use ScraperAPI: https://www.scraperapi.com (1000 free requests)');
+          console.warn('   2. Use ScrapingBee: https://www.scrapingbee.com (1000 free requests)');
+          console.warn('   3. Use RapidAPI: https://rapidapi.com/hub (various scraping APIs)');
+          console.warn('   4. Deploy Supabase Edge Function with ScrapingBee integration');
+          console.warn('   5. Manually add your social media URLs on the connection page');
         }
       }
 
@@ -325,7 +422,7 @@ export class SocialMediaDetector {
       const url = match[1];
 
       // Check if this URL contains any social media domain
-      const socialDomains = ['facebook.com', 'fb.com', 'instagram.com', 'threads.net', 'twitter.com', 'x.com', 'linkedin.com', 'youtube.com', 'tiktok.com'];
+      const socialDomains = this.socialPlatforms.flatMap(p => p.domains);
       const containsSocialDomain = socialDomains.some(domain => url.toLowerCase().includes(domain));
 
       if (containsSocialDomain && !foundUrls.has(url)) {
