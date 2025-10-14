@@ -815,7 +815,14 @@ export class SocialMediaDetector {
     try {
       console.log(`📊 Fetching real follower count for ${platform}: ${url}`);
 
-      // METHOD 1: Try RapidAPI Social Media Stats APIs (multiple options)
+      // METHOD 1: Try scraping the profile page directly (WORKS WITHOUT API KEYS!)
+      const scrapedStats = await this.scrapeProfileStats(platform, url);
+      if (scrapedStats) {
+        console.log(`✅ Got stats from scraping: ${scrapedStats.followers} followers`);
+        return scrapedStats;
+      }
+
+      // METHOD 2: Try RapidAPI Social Media Stats APIs (if key is configured)
       const rapidApiKey = import.meta.env.VITE_RAPIDAPI_KEY;
       if (rapidApiKey) {
         const stats = await this.fetchFromRapidAPI(platform, url, rapidApiKey);
@@ -825,7 +832,7 @@ export class SocialMediaDetector {
         }
       }
 
-      // METHOD 2: Try YouTube API directly (for YouTube only)
+      // METHOD 3: Try YouTube API directly (for YouTube only, if key is configured)
       if (platform === 'youtube') {
         const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
         if (youtubeApiKey) {
@@ -837,14 +844,7 @@ export class SocialMediaDetector {
         }
       }
 
-      // METHOD 3: Try scraping the profile page directly
-      const scrapedStats = await this.scrapeProfileStats(platform, url);
-      if (scrapedStats) {
-        console.log(`✅ Got stats from scraping: ${scrapedStats.followers} followers`);
-        return scrapedStats;
-      }
-
-      // METHOD 4: Try Supabase Edge Function (fallback)
+      // METHOD 4: Try Supabase Edge Function (fallback, if configured)
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -1013,78 +1013,168 @@ export class SocialMediaDetector {
   }
 
   /**
-   * Scrape profile page for follower count (last resort)
+   * Scrape profile page for follower count (WORKS WITHOUT ANY API KEYS!)
    * This method tries to extract follower counts from the HTML
    */
   private async scrapeProfileStats(platform: string, url: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
     try {
-      // Try to fetch the profile page
+      console.log(`🔍 Attempting to scrape ${platform} profile for stats...`);
       let html = '';
+      let usedProxy = false;
 
-      // Try direct fetch first
-      try {
-        const response = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          },
-          signal: AbortSignal.timeout(10000)
-        });
-        if (response.ok) {
-          html = await response.text();
-        }
-      } catch (error) {
-        // Direct fetch failed, try CORS proxy
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        const proxyResponse = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
-        if (proxyResponse.ok) {
-          html = await proxyResponse.text();
+      // Try multiple CORS proxies in sequence
+      const proxies = [
+        null, // Direct fetch first (no proxy)
+        `https://api.allorigins.win/raw?url=`,
+        `https://corsproxy.io/?`,
+        `https://api.codetabs.com/v1/proxy?quest=`
+      ];
+
+      for (const proxy of proxies) {
+        try {
+          const fetchUrl = proxy ? `${proxy}${encodeURIComponent(url)}` : url;
+          const response = await fetch(fetchUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            },
+            signal: AbortSignal.timeout(proxy ? 15000 : 10000)
+          });
+
+          if (response.ok) {
+            html = await response.text();
+            if (html && html.length > 100) {
+              usedProxy = proxy !== null;
+              console.log(`✅ Fetched HTML via ${proxy ? 'CORS proxy' : 'direct fetch'} (${html.length} chars)`);
+              break;
+            }
+          }
+        } catch (error) {
+          continue; // Try next proxy
         }
       }
 
-      if (!html || html.length < 100) return null;
+      if (!html || html.length < 100) {
+        console.warn(`⚠️ Could not fetch HTML for ${platform} profile`);
+        return null;
+      }
 
-      // Platform-specific scraping patterns
+      // Platform-specific scraping patterns (multiple patterns per platform for better success rate)
       let followers = 0;
+      let verified = false;
 
       if (platform === 'instagram') {
-        // Look for follower count in Instagram HTML/metadata
-        const match = html.match(/"edge_followed_by":\s*{\s*"count":\s*(\d+)/);
+        // Pattern 1: JSON data in script tag
+        let match = html.match(/"edge_followed_by":\s*{\s*"count":\s*(\d+)/);
         if (match) followers = parseInt(match[1]);
-      } else if (platform === 'twitter' || platform === 'x') {
-        // Look for follower count in Twitter HTML
-        const match = html.match(/"followers_count":(\d+)/);
-        if (match) followers = parseInt(match[1]);
-      } else if (platform === 'linkedin') {
-        // Look for follower count in LinkedIn
-        const match = html.match(/(\d+(?:,\d+)*)\s+followers/i);
-        if (match) followers = parseInt(match[1].replace(/,/g, ''));
-      } else if (platform === 'facebook') {
-        // Look for like count on Facebook pages
-        const match = html.match(/(\d+(?:,\d+)*(?:\.\d+)?[KkMm]?)\s+(?:likes|followers)/i);
-        if (match) {
-          const count = match[1].toLowerCase();
-          if (count.includes('k')) {
-            followers = Math.floor(parseFloat(count) * 1000);
-          } else if (count.includes('m')) {
-            followers = Math.floor(parseFloat(count) * 1000000);
-          } else {
-            followers = parseInt(count.replace(/,/g, ''));
-          }
+
+        // Pattern 2: Meta tags
+        if (!followers) {
+          match = html.match(/content="(\d+)\s+Followers/i);
+          if (match) followers = parseInt(match[1]);
         }
+
+        // Pattern 3: Formatted count (1.5M followers)
+        if (!followers) {
+          match = html.match(/(\d+(?:\.\d+)?[KkMm]?)\s+followers/i);
+          if (match) followers = this.parseFormattedNumber(match[1]);
+        }
+
+        // Check for verified badge
+        verified = html.includes('"is_verified":true') || html.includes('Verified');
+
+      } else if (platform === 'twitter' || platform === 'x') {
+        // Pattern 1: JSON data
+        let match = html.match(/"followers_count":(\d+)/);
+        if (match) followers = parseInt(match[1]);
+
+        // Pattern 2: Formatted text
+        if (!followers) {
+          match = html.match(/(\d+(?:\.\d+)?[KkMm]?)\s+Followers/i);
+          if (match) followers = this.parseFormattedNumber(match[1]);
+        }
+
+        // Check for verified
+        verified = html.includes('"verified":true') || html.includes('Verified account');
+
+      } else if (platform === 'linkedin') {
+        // Pattern 1: With commas
+        let match = html.match(/(\d+(?:,\d+)*)\s+followers/i);
+        if (match) followers = parseInt(match[1].replace(/,/g, ''));
+
+        // Pattern 2: Formatted (1.5K followers)
+        if (!followers) {
+          match = html.match(/(\d+(?:\.\d+)?[KkMm]?)\s+followers/i);
+          if (match) followers = this.parseFormattedNumber(match[1]);
+        }
+
+      } else if (platform === 'facebook') {
+        // Pattern 1: Page likes with formatting
+        let match = html.match(/(\d+(?:,\d+)*(?:\.\d+)?[KkMm]?)\s+(?:likes|people like this|followers)/i);
+        if (match) followers = this.parseFormattedNumber(match[1].replace(/,/g, ''));
+
+        // Pattern 2: Meta tags
+        if (!followers) {
+          match = html.match(/content="(\d+)\s+people like this/i);
+          if (match) followers = parseInt(match[1]);
+        }
+
+      } else if (platform === 'youtube') {
+        // Pattern 1: Subscriber count
+        let match = html.match(/(\d+(?:\.\d+)?[KkMmBb]?)\s+subscribers/i);
+        if (match) followers = this.parseFormattedNumber(match[1]);
+
+        // Pattern 2: JSON data
+        if (!followers) {
+          match = html.match(/"subscriberCountText".*?"simpleText":"([\d.KMB]+)\s+subscribers"/i);
+          if (match) followers = this.parseFormattedNumber(match[1]);
+        }
+
+      } else if (platform === 'tiktok') {
+        // Pattern 1: Follower count
+        let match = html.match(/"followerCount":(\d+)/);
+        if (match) followers = parseInt(match[1]);
+
+        // Pattern 2: Formatted count
+        if (!followers) {
+          match = html.match(/(\d+(?:\.\d+)?[KkMm]?)\s+Followers/i);
+          if (match) followers = this.parseFormattedNumber(match[1]);
+        }
+
+        verified = html.includes('"verified":true');
       }
 
       if (followers > 0) {
+        console.log(`✅ Successfully scraped ${platform}: ${followers} followers ${verified ? '(verified)' : ''}`);
         return {
           followers,
           engagement: 0,
-          verified: false
+          verified
         };
       }
 
+      console.warn(`⚠️ Could not extract follower count from ${platform} HTML`);
       return null;
     } catch (error) {
       console.warn(`⚠️ Profile scraping failed for ${platform}:`, error);
       return null;
+    }
+  }
+
+  /**
+   * Parse formatted numbers like "1.5K", "2M", "500" into actual numbers
+   */
+  private parseFormattedNumber(str: string): number {
+    const cleaned = str.toLowerCase().replace(/,/g, '');
+
+    if (cleaned.includes('b')) {
+      return Math.floor(parseFloat(cleaned) * 1000000000);
+    } else if (cleaned.includes('m')) {
+      return Math.floor(parseFloat(cleaned) * 1000000);
+    } else if (cleaned.includes('k')) {
+      return Math.floor(parseFloat(cleaned) * 1000);
+    } else {
+      return parseInt(cleaned) || 0;
     }
   }
 
