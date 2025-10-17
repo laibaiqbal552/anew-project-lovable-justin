@@ -1,72 +1,100 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Loader2, Building, Globe, MapPin, Phone, FileText, ArrowRight, 
-  User, Mail, Lock, CheckCircle2, Sparkles
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Loader2,
+  Building,
+  Globe,
+  MapPin,
+  Phone,
+  FileText,
+  ArrowRight,
+  User,
+  Mail,
+  Lock,
+  CheckCircle2,
+  Sparkles,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const scanSchema = z.object({
   // Account Info
-  fullName: z.string().min(2, 'Please enter your full name'),
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  fullName: z.string().min(2, "Please enter your full name"),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   // Business Info
-  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
-  websiteUrl: z.string().url('Please enter a valid URL (including http:// or https://)'),
-  industry: z.string().min(1, 'Please select an industry'),
-  address: z.string().min(5, 'Please enter a complete address'),
-  phone: z.string().min(10, 'Please enter a valid phone number'),
-  description: z.string().min(10, 'Please provide a brief description of your business'),
+  businessName: z
+    .string()
+    .min(2, "Business name must be at least 2 characters"),
+  websiteUrl: z
+    .string()
+    .url("Please enter a valid URL (including http:// or https://)"),
+  industry: z.string().min(1, "Please select an industry"),
+  address: z.string().min(5, "Please enter a complete address"),
+  phone: z.string().min(10, "Please enter a valid phone number"),
+  description: z
+    .string()
+    .min(10, "Please provide a brief description of your business"),
 });
 
 type ScanForm = z.infer<typeof scanSchema>;
 
 const industries = [
-  'HVAC',
-  'Pest Control',
-  'Plumbing',
-  'Electrical',
-  'Roofing',
-  'Landscaping & Lawn Care',
-  'Carpet Cleaning',
-  'House Cleaning',
-  'Window Cleaning',
-  'Garage Door Services',
-  'Painting',
-  'Handyman Services',
-  'Appliance Repair',
-  'Lock & Security',
-  'Pool & Spa Services',
-  'Junk Removal',
-  'Moving Services',
-  'General Contracting',
-  'Flooring',
-  'Kitchen & Bath Remodeling',
-  'Siding',
-  'Gutter Services',
-  'Pressure Washing',
-  'Tree Services',
-  'Snow Removal',
-  'Septic Services',
-  'Well Services',
-  'Foundation Repair',
-  'Insulation',
-  'Waterproofing',
-  'Home Inspection',
-  'Other Home Services'
+  "HVAC",
+  "Pest Control",
+  "Plumbing",
+  "Electrical",
+  "Roofing",
+  "Landscaping & Lawn Care",
+  "Carpet Cleaning",
+  "House Cleaning",
+  "Window Cleaning",
+  "Garage Door Services",
+  "Painting",
+  "Handyman Services",
+  "Appliance Repair",
+  "Lock & Security",
+  "Pool & Spa Services",
+  "Junk Removal",
+  "Moving Services",
+  "General Contracting",
+  "Flooring",
+  "Kitchen & Bath Remodeling",
+  "Siding",
+  "Gutter Services",
+  "Pressure Washing",
+  "Tree Services",
+  "Snow Removal",
+  "Septic Services",
+  "Well Services",
+  "Foundation Repair",
+  "Insulation",
+  "Waterproofing",
+  "Home Inspection",
+  "Other Home Services",
 ];
 
 const StartScan = () => {
@@ -83,17 +111,19 @@ const StartScan = () => {
   useEffect(() => {
     const checkAuth = async () => {
       // FIRST: Check if returning from social media step (highest priority)
-      const fromSocialMedia = localStorage.getItem('fromSocialMedia');
-      if (fromSocialMedia === 'true') {
+      const fromSocialMedia = localStorage.getItem("fromSocialMedia");
+      if (fromSocialMedia === "true") {
         // Load saved form data
-        const savedData = localStorage.getItem('registrationData');
+        const savedData = localStorage.getItem("registrationData");
         if (savedData) {
           const parsedData = JSON.parse(savedData);
           form.reset(parsedData);
           setReviewData(parsedData);
 
           // Check if user is authenticated to set correct step count
-          const { data: { user } } = await supabase.auth.getUser();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
           if (user) {
             setIsAuthenticated(true);
             setSkipAccount(true);
@@ -101,13 +131,15 @@ const StartScan = () => {
 
           setStep(4); // Go directly to review step
         }
-        localStorage.removeItem('fromSocialMedia');
+        localStorage.removeItem("fromSocialMedia");
         setIsCheckingAuth(false);
         return; // Exit early - don't check auth again
       }
 
       // SECOND: Check authentication
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         setIsAuthenticated(true);
         setSkipAccount(true);
@@ -121,21 +153,77 @@ const StartScan = () => {
   const form = useForm<ScanForm>({
     resolver: zodResolver(scanSchema),
     defaultValues: {
-      fullName: '',
-      email: '',
-      password: '',
-      businessName: '',
-      websiteUrl: '',
-      industry: '',
-      address: '',
-      phone: '',
-      description: '',
+      fullName: "",
+      email: "",
+      password: "",
+      businessName: "",
+      websiteUrl: "",
+      industry: "",
+      address: "",
+      phone: "",
+      description: "",
     },
   });
 
   const handleSkipAccount = () => {
     setSkipAccount(true);
     setStep(2);
+  };
+
+  const sendToWebhook = async (data: ScanForm) => {
+    try {
+      const webhookUrl =
+        "https://services.leadconnectorhq.com/hooks/sOFKfTnicELjZQ3sH244/webhook-trigger/b375e331-650f-4897-b03d-5953c55df73c?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6InNPRktmVG5pY0VMalpRM3NIMjQ0IiwidmVyc2lvbiI6MSwiaWF0IjoxNzU5OTU4NjYxNDA1LCJzdWIiOiJ1bTVKbzlGUFhHQWczUnFvSmdWTyJ9.5pIP82gutEv4jwyS2CQhnSZI1xQaiewJrPePtwU6Oak";
+
+      // Get the email based on authentication status
+      let userEmail = "";
+      let userName = "";
+
+      if (isAuthenticated) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          userEmail = user.email || "";
+          userName = user.user_metadata?.full_name || data.businessName;
+        }
+      } else if (!skipAccount) {
+        userEmail = data.email;
+        userName = data.fullName;
+      } else {
+        userName = data.businessName;
+      }
+
+      const payload = {
+        email: userEmail,
+        phone: data.phone,
+        fullName: userName,
+        businessName: data.businessName,
+        website: data.websiteUrl,
+        industry: data.industry,
+        address: data.address,
+        description: data.description,
+      };
+
+      console.log("Sending to webhook:", payload);
+
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Webhook error:", errorText);
+      }
+
+      console.log("Webhook sent successfully");
+    } catch (error) {
+      console.error("Error sending to webhook:", error);
+    }
   };
 
   const handleNext = async () => {
@@ -146,24 +234,33 @@ const StartScan = () => {
       if (skipAccount) {
         setStep(2);
       } else {
-        const valid = await form.trigger(['fullName', 'email', 'password']);
+        const valid = await form.trigger(["fullName", "email", "password"]);
         if (valid) setStep(2);
       }
     } else if (step === 2) {
       const valid = await form.trigger([
-        'businessName', 'websiteUrl', 'industry',
-        'address', 'phone', 'description'
+        "businessName",
+        "websiteUrl",
+        "industry",
+        "address",
+        "phone",
+        "description",
       ]);
       if (valid) {
-        // Save form data to localStorage for later retrieval
+        // Get form data
         const formData = form.getValues();
-        localStorage.setItem('registrationData', JSON.stringify(formData));
-        localStorage.setItem('businessWebsiteUrl', formData.websiteUrl);
-        localStorage.setItem('businessName', formData.businessName);
+
+        // Send to webhook
+        await sendToWebhook(formData);
+
+        // Save form data to localStorage for later retrieval
+        localStorage.setItem("registrationData", JSON.stringify(formData));
+        localStorage.setItem("businessWebsiteUrl", formData.websiteUrl);
+        localStorage.setItem("businessName", formData.businessName);
 
         // Navigate to social media connection
-        toast.success('Information saved! Let\'s connect your social media.');
-        navigate('/connect');
+        toast.success("Information saved! Let's connect your social media.");
+        navigate("/connect");
       }
     }
   };
@@ -174,12 +271,14 @@ const StartScan = () => {
 
     try {
       // Check if user is already authenticated (logged in before starting this flow)
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (user && isAuthenticated) {
         // User is already logged in - create business for this user
         const { data: business, error: businessError } = await supabase
-          .from('businesses')
+          .from("businesses")
           .insert({
             user_id: user.id,
             business_name: data.businessName,
@@ -193,77 +292,78 @@ const StartScan = () => {
           .single();
 
         if (businessError) {
-          console.error('Business creation error:', businessError);
-          setError('Failed to save business details. Please try again.');
+          console.error("Business creation error:", businessError);
+          setError("Failed to save business details. Please try again.");
           setIsLoading(false);
           return;
         }
 
         // Store business info for analysis
-        localStorage.setItem('currentBusinessId', business.id);
-        localStorage.setItem('businessWebsiteUrl', data.websiteUrl);
-        localStorage.setItem('businessName', data.businessName);
-        localStorage.removeItem('isGuestUser');
+        localStorage.setItem("currentBusinessId", business.id);
+        localStorage.setItem("businessWebsiteUrl", data.websiteUrl);
+        localStorage.setItem("businessName", data.businessName);
+        localStorage.removeItem("isGuestUser");
 
         // Clean up temporary data
-        localStorage.removeItem('registrationData');
-        localStorage.removeItem('fromSocialMedia');
+        localStorage.removeItem("registrationData");
+        localStorage.removeItem("fromSocialMedia");
 
         // Save social URLs from localStorage to database if they exist
-        const savedSocialUrls = localStorage.getItem('socialUrls');
+        const savedSocialUrls = localStorage.getItem("socialUrls");
         if (savedSocialUrls) {
           try {
             const socialUrls = JSON.parse(savedSocialUrls);
             for (const [platform, url] of Object.entries(socialUrls)) {
-              if (url && typeof url === 'string' && url.trim() !== '') {
-                await supabase
-                  .from('social_accounts')
-                  .insert({
-                    business_id: business.id,
-                    platform: platform,
-                    account_url: url.trim(),
-                    is_connected: false,
-                  });
+              if (url && typeof url === "string" && url.trim() !== "") {
+                await supabase.from("social_accounts").insert({
+                  business_id: business.id,
+                  platform: platform,
+                  account_url: url.trim(),
+                  is_connected: false,
+                });
               }
             }
-            localStorage.removeItem('socialUrls');
+            localStorage.removeItem("socialUrls");
           } catch (err) {
-            console.error('Error processing saved social URLs:', err);
+            console.error("Error processing saved social URLs:", err);
           }
         }
 
-        toast.success('Business information saved! Starting your brand analysis...');
-        navigate('/analysis');
-
+        toast.success(
+          "Business information saved! Starting your brand analysis..."
+        );
+        navigate("/analysis");
       } else if (skipAccount && !user) {
         // Guest flow - store business info in localStorage only
         const guestBusinessId = `guest_${Date.now()}`;
 
-        localStorage.setItem('currentBusinessId', guestBusinessId);
-        localStorage.setItem('businessWebsiteUrl', data.websiteUrl);
-        localStorage.setItem('businessName', data.businessName);
-        localStorage.setItem('businessIndustry', data.industry);
-        localStorage.setItem('businessAddress', data.address);
-        localStorage.setItem('businessPhone', data.phone);
-        localStorage.setItem('businessDescription', data.description);
-        localStorage.setItem('isGuestUser', 'true');
+        localStorage.setItem("currentBusinessId", guestBusinessId);
+        localStorage.setItem("businessWebsiteUrl", data.websiteUrl);
+        localStorage.setItem("businessName", data.businessName);
+        localStorage.setItem("businessIndustry", data.industry);
+        localStorage.setItem("businessAddress", data.address);
+        localStorage.setItem("businessPhone", data.phone);
+        localStorage.setItem("businessDescription", data.description);
+        localStorage.setItem("isGuestUser", "true");
 
-        toast.success('Starting your brand analysis...');
-        navigate('/analysis');
+        toast.success("Starting your brand analysis...");
+        navigate("/analysis");
       } else {
         // New user registration flow - create account and save to database
         const redirectUrl = `${window.location.origin}/`;
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: data.email,
-          password: data.password,
-          options: {
-            emailRedirectTo: redirectUrl,
-            data: {
-              full_name: data.fullName,
-              company_name: data.businessName,
-            }
+        const { data: authData, error: authError } = await supabase.auth.signUp(
+          {
+            email: data.email,
+            password: data.password,
+            options: {
+              emailRedirectTo: redirectUrl,
+              data: {
+                full_name: data.fullName,
+                company_name: data.businessName,
+              },
+            },
           }
-        });
+        );
 
         if (authError) {
           setError(authError.message);
@@ -272,14 +372,14 @@ const StartScan = () => {
         }
 
         if (!authData.user) {
-          setError('Failed to create account. Please try again.');
+          setError("Failed to create account. Please try again.");
           setIsLoading(false);
           return;
         }
 
         // Create business record
         const { data: business, error: businessError } = await supabase
-          .from('businesses')
+          .from("businesses")
           .insert({
             user_id: authData.user.id,
             business_name: data.businessName,
@@ -293,34 +393,34 @@ const StartScan = () => {
           .single();
 
         if (businessError) {
-          console.error('Business creation error:', businessError);
-          setError('Failed to save business details. Please try again.');
+          console.error("Business creation error:", businessError);
+          setError("Failed to save business details. Please try again.");
           setIsLoading(false);
           return;
         }
 
         // Store business info for analysis
-        localStorage.setItem('currentBusinessId', business.id);
-        localStorage.setItem('businessWebsiteUrl', data.websiteUrl);
-        localStorage.setItem('businessName', data.businessName);
-        localStorage.removeItem('isGuestUser');
+        localStorage.setItem("currentBusinessId", business.id);
+        localStorage.setItem("businessWebsiteUrl", data.websiteUrl);
+        localStorage.setItem("businessName", data.businessName);
+        localStorage.removeItem("isGuestUser");
 
         // Clean up temporary registration data
-        localStorage.removeItem('registrationData');
-        localStorage.removeItem('fromSocialMedia');
+        localStorage.removeItem("registrationData");
+        localStorage.removeItem("fromSocialMedia");
 
         // Save social URLs from localStorage to database if they exist
-        const savedSocialUrls = localStorage.getItem('socialUrls');
+        const savedSocialUrls = localStorage.getItem("socialUrls");
         if (savedSocialUrls) {
           try {
             const socialUrls = JSON.parse(savedSocialUrls);
-            console.log('Saving social URLs to database:', socialUrls);
+            console.log("Saving social URLs to database:", socialUrls);
 
             // Insert each social account into the database
             for (const [platform, url] of Object.entries(socialUrls)) {
-              if (url && typeof url === 'string' && url.trim() !== '') {
+              if (url && typeof url === "string" && url.trim() !== "") {
                 const { error: socialError } = await supabase
-                  .from('social_accounts')
+                  .from("social_accounts")
                   .insert({
                     business_id: business.id,
                     platform: platform,
@@ -329,31 +429,38 @@ const StartScan = () => {
                   });
 
                 if (socialError) {
-                  console.error(`Error saving ${platform} account:`, socialError);
+                  console.error(
+                    `Error saving ${platform} account:`,
+                    socialError
+                  );
                 }
               }
             }
 
             // Clean up the temporary social URLs from localStorage
-            localStorage.removeItem('socialUrls');
-            console.log('Social URLs saved successfully and cleaned up from localStorage');
+            localStorage.removeItem("socialUrls");
+            console.log(
+              "Social URLs saved successfully and cleaned up from localStorage"
+            );
           } catch (err) {
-            console.error('Error processing saved social URLs:', err);
+            console.error("Error processing saved social URLs:", err);
           }
         }
 
         // Check if session exists (email confirmation disabled)
         if (authData.session) {
-          toast.success('Account created! Starting your brand analysis...');
-          navigate('/analysis');
+          toast.success("Account created! Starting your brand analysis...");
+          navigate("/analysis");
         } else {
-          toast.success('Account created! Please check your email for a confirmation link.');
-          setTimeout(() => navigate('/'), 2000);
+          toast.success(
+            "Account created! Please check your email for a confirmation link."
+          );
+          setTimeout(() => navigate("/"), 2000);
         }
       }
     } catch (err: any) {
-      console.error('Registration error:', err);
-      setError(err.message || 'An error occurred. Please try again.');
+      console.error("Registration error:", err);
+      setError(err.message || "An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -363,8 +470,18 @@ const StartScan = () => {
 
   // Calculate progress value based on authentication status
   const progressValue = isAuthenticated
-    ? (step === 2 ? 25 : step === 4 ? 75 : 50)  // For logged-in users: Step 1 (Business) = 25%, Step 2 (Social) = 50%, Step 3 (Review) = 75%
-    : (step === 1 ? 20 : step === 2 ? 40 : step === 4 ? 80 : 60);  // For non-logged-in: Step 1 = 20%, Step 2 = 40%, Step 3 (Social) = 60%, Step 4 (Review) = 80%
+    ? step === 2
+      ? 25
+      : step === 4
+      ? 75
+      : 50 // For logged-in users: Step 1 (Business) = 25%, Step 2 (Social) = 50%, Step 3 (Review) = 75%
+    : step === 1
+    ? 20
+    : step === 2
+    ? 40
+    : step === 4
+    ? 80
+    : 60; // For non-logged-in: Step 1 = 20%, Step 2 = 40%, Step 3 (Social) = 60%, Step 4 (Review) = 80%
 
   // Show loading state while checking authentication
   if (isCheckingAuth) {
@@ -392,14 +509,30 @@ const StartScan = () => {
             {step === 4 && "Review your information"}
           </p>
           <div className="mt-6">
-            <Progress value={progressValue} className="w-full max-w-md mx-auto" />
+            <Progress
+              value={progressValue}
+              className="w-full max-w-md mx-auto"
+            />
             <p className="text-sm text-gray-500 mt-2">
               {/* For logged-in users: steps are 1,2,3 (Business, Social, Review) */}
               {/* For non-logged-in: steps are 1,2,3,4,5 (Account, Business, Social, Review, Analysis) */}
-              Step {isAuthenticated
-                ? (step === 2 ? '1' : step === 4 ? '3' : '2')  // Logged-in: Step 2->1, Step 4->3
-                : (step === 1 ? '1' : step === 2 ? '2' : step === 4 ? '4' : step)  // Non-logged-in: normal progression
-              } of {totalSteps}
+              Step{" "}
+              {
+                isAuthenticated
+                  ? step === 2
+                    ? "1"
+                    : step === 4
+                    ? "3"
+                    : "2" // Logged-in: Step 2->1, Step 4->3
+                  : step === 1
+                  ? "1"
+                  : step === 2
+                  ? "2"
+                  : step === 4
+                  ? "4"
+                  : step // Non-logged-in: normal progression
+              }{" "}
+              of {totalSteps}
             </p>
           </div>
         </div>
@@ -428,26 +561,35 @@ const StartScan = () => {
               )}
             </CardTitle>
             <CardDescription>
-              {step === 1 && "You'll use this email to access your brand reports"}
-              {step === 2 && "We'll analyze your digital presence across multiple channels"}
-              {step === 4 && "Please review your details before starting the analysis"}
+              {step === 1 &&
+                "You'll use this email to access your brand reports"}
+              {step === 2 &&
+                "We'll analyze your digital presence across multiple channels"}
+              {step === 4 &&
+                "Please review your details before starting the analysis"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-6"
+            >
               {/* Step 1: Account Info */}
               {step === 1 && (
                 <div className="space-y-6 animate-fade-in">
                   {!skipAccount && (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="fullName" className="flex items-center gap-2">
+                        <Label
+                          htmlFor="fullName"
+                          className="flex items-center gap-2"
+                        >
                           <User className="h-4 w-4" />
                           Full Name *
                         </Label>
                         <Input
                           id="fullName"
-                          {...form.register('fullName')}
+                          {...form.register("fullName")}
                           placeholder="John Smith"
                           disabled={isLoading}
                           autoComplete="name"
@@ -460,14 +602,17 @@ const StartScan = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="flex items-center gap-2">
+                        <Label
+                          htmlFor="email"
+                          className="flex items-center gap-2"
+                        >
                           <Mail className="h-4 w-4" />
                           Email Address *
                         </Label>
                         <Input
                           id="email"
                           type="email"
-                          {...form.register('email')}
+                          {...form.register("email")}
                           placeholder="you@company.com"
                           disabled={isLoading}
                           autoComplete="email"
@@ -480,14 +625,17 @@ const StartScan = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="password" className="flex items-center gap-2">
+                        <Label
+                          htmlFor="password"
+                          className="flex items-center gap-2"
+                        >
                           <Lock className="h-4 w-4" />
                           Password *
                         </Label>
                         <Input
                           id="password"
                           type="password"
-                          {...form.register('password')}
+                          {...form.register("password")}
                           placeholder="Create a secure password"
                           disabled={isLoading}
                           autoComplete="new-password"
@@ -531,20 +679,28 @@ const StartScan = () => {
                             Guest Mode
                           </h3>
                           <p className="text-sm text-gray-600 mb-3">
-                            You're continuing without an account. You'll still get your full brand analysis, but:
+                            You're continuing without an account. You'll still
+                            get your full brand analysis, but:
                           </p>
                           <ul className="text-sm text-gray-600 space-y-2">
                             <li className="flex items-start gap-2">
                               <span className="text-blue-600">•</span>
-                              <span>Results won't be saved for future access</span>
+                              <span>
+                                Results won't be saved for future access
+                              </span>
                             </li>
                             <li className="flex items-start gap-2">
                               <span className="text-blue-600">•</span>
-                              <span>You won't receive email updates or notifications</span>
+                              <span>
+                                You won't receive email updates or notifications
+                              </span>
                             </li>
                             <li className="flex items-start gap-2">
                               <span className="text-blue-600">•</span>
-                              <span>You can create an account anytime to save your results</span>
+                              <span>
+                                You can create an account anytime to save your
+                                results
+                              </span>
                             </li>
                           </ul>
                         </div>
@@ -568,13 +724,16 @@ const StartScan = () => {
                 <div className="space-y-6 animate-fade-in">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="businessName" className="flex items-center gap-2">
+                      <Label
+                        htmlFor="businessName"
+                        className="flex items-center gap-2"
+                      >
                         <Building className="h-4 w-4" />
                         Business Name *
                       </Label>
                       <Input
                         id="businessName"
-                        {...form.register('businessName')}
+                        {...form.register("businessName")}
                         placeholder="Your Business Name"
                         disabled={isLoading}
                       />
@@ -586,13 +745,16 @@ const StartScan = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="websiteUrl" className="flex items-center gap-2">
+                      <Label
+                        htmlFor="websiteUrl"
+                        className="flex items-center gap-2"
+                      >
                         <Globe className="h-4 w-4" />
                         Website URL *
                       </Label>
                       <Input
                         id="websiteUrl"
-                        {...form.register('websiteUrl')}
+                        {...form.register("websiteUrl")}
                         placeholder="https://yourbusiness.com"
                         disabled={isLoading}
                       />
@@ -607,7 +769,11 @@ const StartScan = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="industry">Industry *</Label>
-                      <Select onValueChange={(value) => form.setValue('industry', value)}>
+                      <Select
+                        onValueChange={(value) =>
+                          form.setValue("industry", value)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select your industry" />
                         </SelectTrigger>
@@ -627,13 +793,16 @@ const StartScan = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Label
+                        htmlFor="phone"
+                        className="flex items-center gap-2"
+                      >
                         <Phone className="h-4 w-4" />
                         Phone Number *
                       </Label>
                       <Input
                         id="phone"
-                        {...form.register('phone')}
+                        {...form.register("phone")}
                         placeholder="+1 (555) 123-4567"
                         disabled={isLoading}
                       />
@@ -646,13 +815,16 @@ const StartScan = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="address" className="flex items-center gap-2">
+                    <Label
+                      htmlFor="address"
+                      className="flex items-center gap-2"
+                    >
                       <MapPin className="h-4 w-4" />
                       Business Address *
                     </Label>
                     <Input
                       id="address"
-                      {...form.register('address')}
+                      {...form.register("address")}
                       placeholder="123 Main Street, City, State, ZIP"
                       disabled={isLoading}
                     />
@@ -664,13 +836,16 @@ const StartScan = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description" className="flex items-center gap-2">
+                    <Label
+                      htmlFor="description"
+                      className="flex items-center gap-2"
+                    >
                       <FileText className="h-4 w-4" />
                       Business Description *
                     </Label>
                     <Textarea
                       id="description"
-                      {...form.register('description')}
+                      {...form.register("description")}
                       placeholder="Briefly describe your business, products, or services..."
                       rows={4}
                       disabled={isLoading}
@@ -688,50 +863,72 @@ const StartScan = () => {
               {step === 4 && reviewData && (
                 <div className="space-y-6 animate-fade-in">
                   <div className="border border-gray-200 rounded-lg p-6 space-y-6">
-                    <h3 className="font-semibold text-lg text-gray-900 mb-4">Review Your Information</h3>
+                    <h3 className="font-semibold text-lg text-gray-900 mb-4">
+                      Review Your Information
+                    </h3>
 
                     {!skipAccount && (
                       <div className="pb-6 border-b border-gray-200">
-                        <h4 className="font-medium text-gray-900 mb-3">Account Details</h4>
+                        <h4 className="font-medium text-gray-900 mb-3">
+                          Account Details
+                        </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
                             <span className="text-gray-500">Full Name:</span>
-                            <p className="font-medium text-gray-900">{reviewData.fullName}</p>
+                            <p className="font-medium text-gray-900">
+                              {reviewData.fullName}
+                            </p>
                           </div>
                           <div>
                             <span className="text-gray-500">Email:</span>
-                            <p className="font-medium text-gray-900">{reviewData.email}</p>
+                            <p className="font-medium text-gray-900">
+                              {reviewData.email}
+                            </p>
                           </div>
                         </div>
                       </div>
                     )}
 
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-3">Business Information</h4>
+                      <h4 className="font-medium text-gray-900 mb-3">
+                        Business Information
+                      </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-gray-500">Business Name:</span>
-                          <p className="font-medium text-gray-900">{reviewData.businessName}</p>
+                          <p className="font-medium text-gray-900">
+                            {reviewData.businessName}
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500">Website:</span>
-                          <p className="font-medium text-gray-900 truncate">{reviewData.websiteUrl}</p>
+                          <p className="font-medium text-gray-900 truncate">
+                            {reviewData.websiteUrl}
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500">Industry:</span>
-                          <p className="font-medium text-gray-900">{reviewData.industry}</p>
+                          <p className="font-medium text-gray-900">
+                            {reviewData.industry}
+                          </p>
                         </div>
                         <div>
                           <span className="text-gray-500">Phone:</span>
-                          <p className="font-medium text-gray-900">{reviewData.phone}</p>
+                          <p className="font-medium text-gray-900">
+                            {reviewData.phone}
+                          </p>
                         </div>
                         <div className="md:col-span-2">
                           <span className="text-gray-500">Address:</span>
-                          <p className="font-medium text-gray-900">{reviewData.address}</p>
+                          <p className="font-medium text-gray-900">
+                            {reviewData.address}
+                          </p>
                         </div>
                         <div className="md:col-span-2">
                           <span className="text-gray-500">Description:</span>
-                          <p className="font-medium text-gray-900">{reviewData.description}</p>
+                          <p className="font-medium text-gray-900">
+                            {reviewData.description}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -751,7 +948,8 @@ const StartScan = () => {
                       <li className="flex items-start gap-3">
                         <CheckCircle2 className="h-5 w-5 text-brand-600 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">
-                          We'll analyze your website, social media, and online presence
+                          We'll analyze your website, social media, and online
+                          presence
                         </span>
                       </li>
                       <li className="flex items-start gap-3">
@@ -764,7 +962,8 @@ const StartScan = () => {
                   </div>
 
                   <div className="text-center text-sm text-gray-500">
-                    By continuing, you agree to our Terms of Service and Privacy Policy
+                    By continuing, you agree to our Terms of Service and Privacy
+                    Policy
                   </div>
                 </div>
               )}
@@ -785,10 +984,10 @@ const StartScan = () => {
                       // Handle back navigation correctly
                       if (step === 4) {
                         // From review step, go back to social media connection page
-                        navigate('/connect');
+                        navigate("/connect");
                       } else if (step === 2 && isAuthenticated) {
                         // For authenticated users on business details, cancel to home
-                        navigate('/');
+                        navigate("/");
                       } else {
                         // Normal back navigation
                         setStep(step - 1);
@@ -802,7 +1001,7 @@ const StartScan = () => {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => navigate('/')}
+                    onClick={() => navigate("/")}
                     disabled={isLoading}
                   >
                     Cancel
@@ -834,7 +1033,9 @@ const StartScan = () => {
                     {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        {skipAccount || isAuthenticated ? 'Starting Analysis...' : 'Creating Account...'}
+                        {skipAccount || isAuthenticated
+                          ? "Starting Analysis..."
+                          : "Creating Account..."}
                       </>
                     ) : (
                       <>
