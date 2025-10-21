@@ -126,12 +126,23 @@ const SocialConnection = () => {
 
   const checkUserAndBusiness = async () => {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
-
       // Check if we have registration data in localStorage (step 2 completed but not yet created account)
       const registrationData = localStorage.getItem('registrationData');
       const businessWebsiteUrl = localStorage.getItem('businessWebsiteUrl');
       const businessName = localStorage.getItem('businessName');
+      const isGuest = localStorage.getItem('isGuestUser') === 'true';
+
+      // For guest users, skip Supabase auth entirely
+      if (isGuest) {
+        console.log('Guest user detected in SocialConnection - skipping Supabase auth');
+        const tempBusinessId = localStorage.getItem('currentBusinessId') || `guest_${Date.now()}`;
+        setBusinessId(tempBusinessId);
+        setSiteUrl(businessWebsiteUrl || '');
+        setBizName(businessName || '');
+        return;
+      }
+
+      const { data: { user }, error } = await supabase.auth.getUser();
 
       if (user) {
         setIsAuthenticated(true);

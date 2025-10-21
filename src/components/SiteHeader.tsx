@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
 import { BarChart3, LogOut, User } from 'lucide-react'
@@ -14,9 +14,36 @@ import topservLogo from '@/assets/topserv-logo.png'
 
 export default function SiteHeader() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const isGuest = localStorage.getItem('isGuestUser') === 'true'
   const isActive = (p: string) => pathname === p
+
+  const handleLogout = async () => {
+    if (isGuest) {
+      // Clear all guest-related data from localStorage
+      localStorage.removeItem('isGuestUser')
+      localStorage.removeItem('currentBusinessId')
+      localStorage.removeItem('businessName')
+      localStorage.removeItem('businessWebsiteUrl')
+      localStorage.removeItem('businessIndustry')
+      localStorage.removeItem('businessAddress')
+      localStorage.removeItem('businessPhone')
+      localStorage.removeItem('businessDescription')
+      localStorage.removeItem('guestAnalysisResults')
+      localStorage.removeItem('registrationData')
+      localStorage.removeItem('fromSocialMedia')
+      localStorage.removeItem('socialUrls')
+      localStorage.removeItem('detectedSocialMedia')
+      localStorage.removeItem('detectedSocialMediaBusinessId')
+      localStorage.removeItem('currentReportId')
+      // Navigate to home
+      navigate('/')
+    } else {
+      // Regular user sign out
+      await signOut()
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-sm">
@@ -76,7 +103,7 @@ export default function SiteHeader() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem onClick={signOut} className="cursor-pointer text-red-600">
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
                     <LogOut className="h-4 w-4 mr-2" />
                     {isGuest ? 'Exit Guest Mode' : 'Sign Out'}
                   </DropdownMenuItem>

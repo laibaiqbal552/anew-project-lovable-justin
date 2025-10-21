@@ -10,11 +10,24 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
 
+    // Check if user is in guest mode - don't call Supabase auth if they are
+    const isGuest = localStorage.getItem('isGuestUser') === 'true';
+
+    if (isGuest) {
+      // Guest users don't use Supabase auth
+      console.log('Guest mode detected - skipping Supabase auth');
+      if (mounted) {
+        setLoading(false);
+        setInitialized(true);
+      }
+      return;
+    }
+
     // Get initial session
     const getSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('Error getting session:', error);
         } else {
@@ -39,7 +52,7 @@ export const useAuth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id || 'No user');
-        
+
         if (mounted) {
           setUser(session?.user ?? null);
           setLoading(false);

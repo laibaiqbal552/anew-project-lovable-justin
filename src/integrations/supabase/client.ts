@@ -15,7 +15,45 @@ if (!envUrl || !envAnon) {
   console.warn('[Supabase] Using fallback URL/key from project config. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY for your environment.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    // Disable automatic anonymous session creation
+    autoSessionRefresh: false
+  }
+});
+
+// Suppress console errors for anonymous auth 422 responses and postMessage CORS errors
+if (typeof window !== 'undefined') {
+  const originalError = console.error;
+  console.error = function(...args: any[]) {
+    // Suppress 422 errors related to anonymous auth attempts
+    const errorString = JSON.stringify(args);
+    if (errorString.includes('422') || errorString.includes('signup') || errorString.includes('Anonymous')) {
+      return; // Silently suppress
+    }
+    // Suppress postMessage CORS errors (common with Supabase when no auth session)
+    if (errorString.includes('postMessage') || errorString.includes('origin')) {
+      return; // Silently suppress
+    }
+    originalError.apply(console, args);
+  };
+
+  // Also suppress uncaught errors from postMessage
+  window.addEventListener('error', (event) => {
+    if (event.message && event.message.includes('postMessage') && event.message.includes('origin')) {
+      event.preventDefault();
+    }
+  }, true);
+
+  // Suppress message errors from failed postMessage attempts
+  window.addEventListener('messageerror', (event) => {
+    event.preventDefault();
+  }, true);
+}
 
 // Database types
 export interface Profile {

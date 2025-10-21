@@ -127,7 +127,7 @@ const Analysis = () => {
           description: localStorage.getItem('businessDescription') || '',
         };
         setBusiness(guestBusiness);
-        setUser({ id: 'guest', email: 'guest@temp.com' }); // Mock user for guest
+        setUser(null); // Guest users remain unauthenticated
       } else {
         // Authenticated mode - load from database
         const { data: { user }, error } = await supabase.auth.getUser();
@@ -200,8 +200,16 @@ const Analysis = () => {
 
       // Start the real analysis using Edge Function
       cancelProgressRef.current = false;
-      simulateProgressUI();
+      // Start progress UI and analysis in parallel
+      simulateProgressUI(); // Show progress UI immediately - doesn't block
+      // Wait for actual analysis to complete
       await runRealAnalysis(reportIdToUse);
+
+      // After analysis completes, navigate to dashboard
+      if (reportIdToUse) {
+        localStorage.setItem('currentReportId', reportIdToUse);
+      }
+      navigate('/dashboard');
 
     } catch (err: any) {
       console.error('Failed to start analysis:', err);
@@ -211,12 +219,16 @@ const Analysis = () => {
 
   const analyzeWebsiteWithPageSpeed = async (url: string) => {
     const API_KEY = "AIzaSyB2ystTLit3rUhyiFx1VocCZNTbhDeWEEk";
-    
+
     try {
+      // Use CORS proxy to bypass browser CORS restrictions
+      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+      const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=`;
+
       // Fetch data for both mobile and desktop
       const [mobileResponse, desktopResponse] = await Promise.all([
-        fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile&category=performance&category=accessibility&category=best-practices&category=seo&key=${API_KEY}`),
-        fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=desktop&category=performance&category=accessibility&category=best-practices&category=seo&key=${API_KEY}`)
+        fetch(`${corsProxy}${apiUrl}mobile&category=performance&category=accessibility&category=best-practices&category=seo&key=${API_KEY}`),
+        fetch(`${corsProxy}${apiUrl}desktop&category=performance&category=accessibility&category=best-practices&category=seo&key=${API_KEY}`)
       ]);
 
       if (!mobileResponse.ok || !desktopResponse.ok) {
@@ -476,8 +488,8 @@ const Analysis = () => {
       }
 
       // Analysis complete - stop simulation and lock UI
+      console.log('✅ Analysis complete! Setting analysisComplete state to true');
       cancelProgressRef.current = true;
-      setAnalysisComplete(true);
       setOverallProgress(100);
 
       // Complete all steps
@@ -487,7 +499,11 @@ const Analysis = () => {
         progress: 100
       })));
 
+      console.log('✅ About to show completion toast and button');
       toast.success('Brand analysis completed successfully!');
+
+      // Set completion last to trigger button display
+      setAnalysisComplete(true);
 
     } catch (error) {
       console.error('Real analysis failed, falling back to simulation:', error);

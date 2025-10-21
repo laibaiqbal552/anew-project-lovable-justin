@@ -110,7 +110,9 @@ const StartScan = () => {
   // Check if user is already logged in AND if returning from social media
   useEffect(() => {
     const checkAuth = async () => {
-      // FIRST: Check if returning from social media step (highest priority)
+      const isGuest = localStorage.getItem('isGuestUser') === 'true';
+
+      // FIRST: Check if returning from social media step (handle for BOTH guests and authenticated users)
       const fromSocialMedia = localStorage.getItem("fromSocialMedia");
       if (fromSocialMedia === "true") {
         // Load saved form data
@@ -120,13 +122,16 @@ const StartScan = () => {
           form.reset(parsedData);
           setReviewData(parsedData);
 
-          // Check if user is authenticated to set correct step count
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (user) {
-            setIsAuthenticated(true);
-            setSkipAccount(true);
+          // Only check Supabase auth if NOT a guest
+          if (!isGuest) {
+            // Check if user is authenticated to set correct step count
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+            if (user) {
+              setIsAuthenticated(true);
+              setSkipAccount(true);
+            }
           }
 
           setStep(4); // Go directly to review step
@@ -136,7 +141,14 @@ const StartScan = () => {
         return; // Exit early - don't check auth again
       }
 
-      // SECOND: Check authentication
+      // SECOND: Check if this is a guest user - NEVER call Supabase for guests!
+      if (isGuest) {
+        console.log('Guest user detected in StartScan, skipping all auth checks');
+        setIsCheckingAuth(false);
+        return; // Exit early - don't call Supabase!
+      }
+
+      // THIRD: Check authentication
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -167,6 +179,7 @@ const StartScan = () => {
 
   const handleSkipAccount = () => {
     setSkipAccount(true);
+    localStorage.setItem('isGuestUser', 'true');
     setStep(2);
   };
 
@@ -270,10 +283,28 @@ const StartScan = () => {
     setError(null);
 
     try {
-      // Check if this is a guest user flow
+      // Check if this is a guest user flow FIRST - don't call Supabase for guests!
       const isGuestFlow = skipAccount || localStorage.getItem('isGuestUser') === 'true';
 
-      // Check if user is already authenticated (logged in before starting this flow)
+      if (isGuestFlow) {
+        // Guest flow - store business info in localStorage only, skip all Supabase calls
+        const guestBusinessId = localStorage.getItem('currentBusinessId') || `guest_${Date.now()}`;
+
+        localStorage.setItem("currentBusinessId", guestBusinessId);
+        localStorage.setItem("businessWebsiteUrl", data.websiteUrl);
+        localStorage.setItem("businessName", data.businessName);
+        localStorage.setItem("businessIndustry", data.industry);
+        localStorage.setItem("businessAddress", data.address);
+        localStorage.setItem("businessPhone", data.phone);
+        localStorage.setItem("businessDescription", data.description);
+        localStorage.setItem("isGuestUser", "true");
+
+        toast.success("Starting your brand analysis...");
+        navigate("/analysis");
+        return;
+      }
+
+      // Only check Supabase auth if NOT a guest user
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -335,21 +366,6 @@ const StartScan = () => {
         toast.success(
           "Business information saved! Starting your brand analysis..."
         );
-        navigate("/analysis");
-      } else if (isGuestFlow && !user) {
-        // Guest flow - store business info in localStorage only
-        const guestBusinessId = localStorage.getItem('currentBusinessId') || `guest_${Date.now()}`;
-
-        localStorage.setItem("currentBusinessId", guestBusinessId);
-        localStorage.setItem("businessWebsiteUrl", data.websiteUrl);
-        localStorage.setItem("businessName", data.businessName);
-        localStorage.setItem("businessIndustry", data.industry);
-        localStorage.setItem("businessAddress", data.address);
-        localStorage.setItem("businessPhone", data.phone);
-        localStorage.setItem("businessDescription", data.description);
-        localStorage.setItem("isGuestUser", "true");
-
-        toast.success("Starting your brand analysis...");
         navigate("/analysis");
       } else {
         // New user registration flow - create account and save to database

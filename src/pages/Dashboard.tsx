@@ -213,7 +213,7 @@ const Dashboard = () => {
         console.log('User authenticated:', user.id);
       } else if (isGuest) {
         console.log('Guest user accessing dashboard');
-        setUser({ id: 'guest', email: 'guest@temp.com' });
+        setUser(null); // Guest users remain unauthenticated
       }
 
       let businessId = currentBusinessId || localStorage.getItem('currentBusinessId');
