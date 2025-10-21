@@ -270,6 +270,9 @@ const StartScan = () => {
     setError(null);
 
     try {
+      // Check if this is a guest user flow
+      const isGuestFlow = skipAccount || localStorage.getItem('isGuestUser') === 'true';
+
       // Check if user is already authenticated (logged in before starting this flow)
       const {
         data: { user },
@@ -333,9 +336,9 @@ const StartScan = () => {
           "Business information saved! Starting your brand analysis..."
         );
         navigate("/analysis");
-      } else if (skipAccount && !user) {
+      } else if (isGuestFlow && !user) {
         // Guest flow - store business info in localStorage only
-        const guestBusinessId = `guest_${Date.now()}`;
+        const guestBusinessId = localStorage.getItem('currentBusinessId') || `guest_${Date.now()}`;
 
         localStorage.setItem("currentBusinessId", guestBusinessId);
         localStorage.setItem("businessWebsiteUrl", data.websiteUrl);

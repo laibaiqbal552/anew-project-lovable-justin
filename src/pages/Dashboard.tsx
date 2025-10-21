@@ -194,32 +194,46 @@ const Dashboard = () => {
     try {
       console.log('Loading dashboard data...');
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) {
+      const isGuest = localStorage.getItem('isGuestUser') === 'true';
+
+      if (error && !isGuest) {
         console.error('Auth error:', error);
         navigate('/');
         return;
       }
 
-      if (!user) {
-        console.log('No authenticated user, redirecting to home');
+      if (!user && !isGuest) {
+        console.log('No authenticated user and not guest, redirecting to home');
         navigate('/');
         return;
       }
-      setUser(user);
-      console.log('User authenticated:', user.id);
+
+      if (user) {
+        setUser(user);
+        console.log('User authenticated:', user.id);
+      } else if (isGuest) {
+        console.log('Guest user accessing dashboard');
+        setUser({ id: 'guest', email: 'guest@temp.com' });
+      }
 
       let businessId = currentBusinessId || localStorage.getItem('currentBusinessId');
       const reportId = localStorage.getItem('currentReportId');
       
       // If no business ID, try to get the user's first business
       if (!businessId) {
+        if (isGuest) {
+          console.log('Guest user has no business ID, redirecting to setup');
+          navigate('/setup');
+          return;
+        }
+
         const { data: userBusinesses } = await supabase
           .from('businesses')
           .select('id')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1);
-        
+
         if (userBusinesses && userBusinesses.length > 0) {
           businessId = userBusinesses[0].id;
           if (businessId) {
@@ -241,32 +255,51 @@ const Dashboard = () => {
       console.log('Loading business:', businessId);
 
       // Load business details
-      const { data: businessData, error: businessError } = await supabase
-        .from('businesses')
-        .select('*')
-        .eq('id', businessId)
-        .single();
+      let businessData;
 
-      if (businessError) {
-        console.error('Error loading business:', businessError);
-        if (businessError.code === 'PGRST116') {
-          // No business found
-          console.log('Business not found, redirecting to setup');
+      if (isGuest) {
+        // Load guest business data from localStorage
+        console.log('Loading guest business from localStorage');
+        businessData = {
+          id: businessId,
+          business_name: localStorage.getItem('businessName') || 'Your Business',
+          website_url: localStorage.getItem('businessWebsiteUrl') || '',
+          industry: localStorage.getItem('businessIndustry') || '',
+          address: localStorage.getItem('businessAddress') || '',
+          phone: localStorage.getItem('businessPhone') || '',
+          description: localStorage.getItem('businessDescription') || '',
+        };
+      } else {
+        const { data: dbBusinessData, error: businessError } = await supabase
+          .from('businesses')
+          .select('*')
+          .eq('id', businessId)
+          .single();
+
+        if (businessError) {
+          console.error('Error loading business:', businessError);
+          if (businessError.code === 'PGRST116') {
+            // No business found
+            console.log('Business not found, redirecting to setup');
+            localStorage.removeItem('currentBusinessId');
+            localStorage.removeItem('currentReportId');
+            navigate('/setup');
+            return;
+          }
+          throw businessError;
+        }
+
+        if (!dbBusinessData) {
+          console.log('No business data found, redirecting to setup');
           localStorage.removeItem('currentBusinessId');
           localStorage.removeItem('currentReportId');
           navigate('/setup');
           return;
         }
-        throw businessError;
+
+        businessData = dbBusinessData;
       }
 
-      if (!businessData) {
-        console.log('No business data found, redirecting to setup');
-        localStorage.removeItem('currentBusinessId');
-        localStorage.removeItem('currentReportId');
-        navigate('/setup');
-        return;
-      }
       setBusiness(businessData);
       console.log('Business loaded:', businessData.business_name);
 
@@ -274,31 +307,48 @@ const Dashboard = () => {
       if (reportId) {
         console.log('Loading report:', reportId);
 
-        const { data: reportData, error: reportError } = await supabase
-          .from('brand_reports')
-          .select('*')
-          .eq('id', reportId)
-          .single();
+        let reportData;
 
-        if (reportError) {
-          console.error('Error loading report:', reportError);
-          if (reportError.code === 'PGRST116') {
-            // No report found
-            console.log('Report not found, redirecting to analysis');
+        if (isGuest) {
+          // Load guest report from localStorage
+          console.log('Loading guest report from localStorage');
+          const guestResults = localStorage.getItem('guestAnalysisResults');
+          if (guestResults) {
+            reportData = JSON.parse(guestResults);
+          } else {
+            console.log('No guest analysis results found, redirecting to analysis');
+            navigate('/analysis');
+            return;
+          }
+        } else {
+          const { data: dbReportData, error: reportError } = await supabase
+            .from('brand_reports')
+            .select('*')
+            .eq('id', reportId)
+            .single();
+
+          if (reportError) {
+            console.error('Error loading report:', reportError);
+            if (reportError.code === 'PGRST116') {
+              // No report found
+              console.log('Report not found, redirecting to analysis');
+              localStorage.removeItem('currentReportId');
+              navigate('/analysis');
+              return;
+            }
+            // Don't throw error for report issues, just redirect to analysis
+            navigate('/analysis');
+            return;
+          }
+
+          if (!dbReportData) {
+            console.log('No report data found, redirecting to analysis');
             localStorage.removeItem('currentReportId');
             navigate('/analysis');
             return;
           }
-          // Don't throw error for report issues, just redirect to analysis
-          navigate('/analysis');
-          return;
-        }
 
-        if (!reportData) {
-          console.log('No report data found, redirecting to analysis');
-          localStorage.removeItem('currentReportId');
-          navigate('/analysis');
-          return;
+          reportData = dbReportData;
         }
 
         // Sanitize recommendations to purge any legacy "connect api" messages
@@ -539,12 +589,12 @@ const Dashboard = () => {
 
         {/* Detailed Analysis */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="insights">Key Insights</TabsTrigger>
             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
             <TabsTrigger value="data">Detailed Data</TabsTrigger>
-            <TabsTrigger value="integrations">API Status</TabsTrigger>
+            {/* <TabsTrigger value="integrations">API Status</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -662,22 +712,175 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-6">
+            {/* Lighthouse Performance Metrics */}
+            {report.analysis_data?.website && (
+              <Card className="border-l-4 border-l-blue-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-blue-600" />
+                    Website Performance (Lighthouse Metrics)
+                  </CardTitle>
+                  <CardDescription>
+                    Real-time analysis from Google Lighthouse API
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* Performance Score */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Performance</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full transition-all ${
+                                (report.analysis_data.website.performance_score || 0) >= 80 ? 'bg-green-500' :
+                                (report.analysis_data.website.performance_score || 0) >= 50 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(report.analysis_data.website.performance_score || 0, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-lg font-bold text-gray-900">
+                            {report.analysis_data.website.performance_score || 0}/100
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Loading Time: {report.analysis_data.website.loadingTime?.desktop ? `${report.analysis_data.website.loadingTime.desktop.toFixed(2)}s` : 'N/A'}
+                      </p>
+                    </div>
+
+                    {/* SEO Score */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">SEO Optimization</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full transition-all ${
+                                (report.analysis_data.website.seo_score || 0) >= 80 ? 'bg-green-500' :
+                                (report.analysis_data.website.seo_score || 0) >= 50 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(report.analysis_data.website.seo_score || 0, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-lg font-bold text-gray-900">
+                            {report.analysis_data.website.seo_score || 0}/100
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Search engine visibility and metadata optimization
+                      </p>
+                    </div>
+
+                    {/* Accessibility Score */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Accessibility</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full transition-all ${
+                                (report.analysis_data.website.accessibility || 0) >= 80 ? 'bg-green-500' :
+                                (report.analysis_data.website.accessibility || 0) >= 50 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(report.analysis_data.website.accessibility || 0, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-lg font-bold text-gray-900">
+                            {report.analysis_data.website.accessibility || 0}/100
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        WCAG compliance and user experience for all visitors
+                      </p>
+                    </div>
+
+                    {/* Best Practices Score */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Best Practices</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full transition-all ${
+                                (report.analysis_data.website.bestPractices || 0) >= 80 ? 'bg-green-500' :
+                                (report.analysis_data.website.bestPractices || 0) >= 50 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(report.analysis_data.website.bestPractices || 0, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-lg font-bold text-gray-900">
+                            {report.analysis_data.website.bestPractices || 0}/100
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Web standards, security, and modern development practices
+                      </p>
+                    </div>
+
+                    {/* Content Quality */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Content Quality</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full transition-all ${
+                                (report.analysis_data.website.content_quality || 0) >= 80 ? 'bg-green-500' :
+                                (report.analysis_data.website.content_quality || 0) >= 50 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(report.analysis_data.website.content_quality || 0, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-lg font-bold text-gray-900">
+                            {report.analysis_data.website.content_quality || 0}/100
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Quality and relevance of your website content
+                      </p>
+                    </div>
+
+                    {/* Key Findings */}
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                      <p className="text-sm text-blue-900 font-medium mb-2">Key Findings:</p>
+                      <ul className="text-xs text-blue-800 space-y-1">
+                        <li>• Desktop and mobile performance scores are tracked separately</li>
+                        <li>• {(report.analysis_data.website.seo_score || 0) >= 80 ? 'Your SEO is well-optimized' : 'Consider improving your SEO optimization'}</li>
+                        <li>• {(report.analysis_data.website.accessibility || 0) >= 80 ? 'Great accessibility compliance' : 'Accessibility improvements needed'}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Check if we have breakdown data */}
             {!report.score_breakdowns ? (
-              <Card>
-                <CardContent className="p-8 text-center">
+              <>
+                {/* <CardContent className="p-8 text-center">
                   <AlertTriangle className="h-12 w-12 mx-auto text-yellow-500 mb-4" />
                   <h3 className="text-lg font-semibold mb-2">Enhanced Insights Not Available</h3>
                   <p className="text-gray-600 mb-4">
-                    This report was generated before our enhanced insights feature was added. 
-                    Run a new analysis to get detailed breakdowns of your scores with specific strengths, 
+                    This report was generated before our enhanced insights feature was added.
+                    Run a new analysis to get detailed breakdowns of your scores with specific strengths,
                     weaknesses, and actionable next steps.
                   </p>
                   <Button onClick={() => navigate('/analysis')} className="mt-2">
                     Run New Analysis
                   </Button>
-                </CardContent>
-              </Card>
+                </CardContent> */}
+              </>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>

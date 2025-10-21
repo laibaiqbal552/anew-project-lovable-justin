@@ -334,6 +334,8 @@ const Analysis = () => {
           loadingTime: pageSpeedResults.loadingTime,
           seo_score: Math.round((pageSpeedResults.mobile.seo + pageSpeedResults.desktop.seo) / 2),
           performance_score: Math.round((pageSpeedResults.mobile.performance + pageSpeedResults.desktop.performance) / 2),
+          accessibility: Math.round((pageSpeedResults.mobile.accessibility + pageSpeedResults.desktop.accessibility) / 2),
+          bestPractices: Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2),
           content_quality: Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2),
           technical_issues: Math.floor(Math.random() * 5) + 1
         } : null,

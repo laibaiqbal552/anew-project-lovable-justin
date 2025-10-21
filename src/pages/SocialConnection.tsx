@@ -291,6 +291,13 @@ const SocialConnection = () => {
 
   const loadExistingSocialAccounts = async (businessId: string) => {
     try {
+      // Skip database operations for temporary/guest businesses
+      const isTemporaryBusiness = businessId.startsWith('temp_') || businessId.startsWith('guest_');
+      if (isTemporaryBusiness) {
+        console.log('Temporary/guest business - skipping database load for social accounts');
+        return;
+      }
+
       const { data: accounts, error } = await supabase
         .from('social_accounts')
         .select('*')
@@ -299,7 +306,7 @@ const SocialConnection = () => {
       if (error) throw error;
 
       console.log('Existing social accounts:', accounts);
-      
+
 
       const urls: Record<string, string> = {};
       const connected: Record<string, boolean> = {};
@@ -321,6 +328,14 @@ const SocialConnection = () => {
   // Auto-save detected profiles to DB without overriding existing manual entries
   const saveDetectedProfiles = async (profiles: { platform: string; url: string }[]) => {
     if (!businessId || !Array.isArray(profiles) || profiles.length === 0) return;
+
+    // Skip database operations for temporary/guest businesses
+    const isTemporaryBusiness = businessId.startsWith('temp_') || businessId.startsWith('guest_');
+    if (isTemporaryBusiness) {
+      console.log('Temporary/guest business - skipping database save for detected profiles');
+      return;
+    }
+
     try {
       for (const p of profiles) {
         const platform = p.platform;
@@ -594,6 +609,14 @@ const SocialConnection = () => {
   }, []);
 
   const saveToDatabase = async (user: { id: string; name: string; url: string, businessId: String }, token: string, platform:string) => {
+    // Skip database operations for temporary/guest businesses
+    const businessIdStr = user.businessId.toString();
+    const isTemporaryBusiness = businessIdStr.startsWith('temp_') || businessIdStr.startsWith('guest_');
+    if (isTemporaryBusiness) {
+      console.log('Temporary/guest business - skipping database save for social account');
+      return;
+    }
+
     const { data, error } = await supabase.from("social_accounts").insert([
       {
         platform: platform,

@@ -15,6 +15,7 @@ import topservLogo from '@/assets/topserv-logo.png'
 export default function SiteHeader() {
   const { pathname } = useLocation()
   const { user, signOut } = useAuth()
+  const isGuest = localStorage.getItem('isGuestUser') === 'true'
   const isActive = (p: string) => pathname === p
 
   return (
@@ -29,10 +30,10 @@ export default function SiteHeader() {
         </Link>
 
         <nav className="flex items-center gap-2">
-          {user ? (
+          {user || isGuest ? (
             <>
-              <Button 
-                asChild 
+              <Button
+                asChild
                 variant={isActive('/dashboard') ? 'default' : 'ghost'}
                 className="hidden sm:flex"
               >
@@ -51,9 +52,9 @@ export default function SiteHeader() {
                 <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-800">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">My Account</p>
+                      <p className="text-sm font-medium leading-none">{isGuest ? 'Guest User' : 'My Account'}</p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
+                        {user?.email || 'guest@temp.com'}
                       </p>
                     </div>
                   </DropdownMenuLabel>
@@ -64,16 +65,20 @@ export default function SiteHeader() {
                       Reports
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/account" className="flex items-center gap-2 cursor-pointer">
-                      <User className="h-4 w-4" />
-                      Account Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {user && !isGuest && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link to="/account" className="flex items-center gap-2 cursor-pointer">
+                          <User className="h-4 w-4" />
+                          Account Settings
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={signOut} className="cursor-pointer text-red-600">
                     <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
+                    {isGuest ? 'Exit Guest Mode' : 'Sign Out'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
