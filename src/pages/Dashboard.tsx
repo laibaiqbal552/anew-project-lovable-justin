@@ -865,6 +865,136 @@ const Dashboard = () => {
               </Card>
             )}
 
+            {/* SEMrush SEO Metrics */}
+            {report.analysis_data?.seo && (
+              <Card className="border-l-4 border-l-green-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    SEO & Domain Authority (SEMrush Analysis)
+                  </CardTitle>
+                  <CardDescription>
+                    Real-time SEO metrics and domain strength analysis
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* Domain Authority */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Domain Authority</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full transition-all ${
+                                (report.analysis_data.seo.domain_authority || 0) >= 50 ? 'bg-green-500' :
+                                (report.analysis_data.seo.domain_authority || 0) >= 30 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min((report.analysis_data.seo.domain_authority || 0) * 2, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-lg font-bold text-gray-900">
+                            {report.analysis_data.seo.domain_authority || 0}/100
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Overall domain strength based on backlink profile
+                      </p>
+                    </div>
+
+                    {/* Organic Keywords */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Organic Keywords Ranking</h4>
+                        <span className="text-lg font-bold text-gray-900">
+                          {report.analysis_data.seo.organic_keywords?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Number of keywords your domain ranks for in search results
+                      </p>
+                    </div>
+
+                    {/* Organic Traffic */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Estimated Monthly Organic Traffic</h4>
+                        <span className="text-lg font-bold text-gray-900">
+                          {report.analysis_data.seo.organic_traffic?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Estimated visitors from organic search per month
+                      </p>
+                    </div>
+
+                    {/* Backlinks */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Total Backlinks</h4>
+                        <span className="text-lg font-bold text-gray-900">
+                          {report.analysis_data.seo.backlinks_count?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Total number of links pointing to your domain
+                      </p>
+                    </div>
+
+                    {/* Referring Domains */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Referring Domains</h4>
+                        <span className="text-lg font-bold text-gray-900">
+                          {report.analysis_data.seo.referring_domains?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Number of unique domains linking to you
+                      </p>
+                    </div>
+
+                    {/* SEO Health Score */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">SEO Health Score</h4>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 bg-gray-200 rounded-full h-3">
+                            <div
+                              className={`h-3 rounded-full transition-all ${
+                                (report.analysis_data.seo.seo_health_score || 0) >= 80 ? 'bg-green-500' :
+                                (report.analysis_data.seo.seo_health_score || 0) >= 50 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(report.analysis_data.seo.seo_health_score || 0, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-lg font-bold text-gray-900">
+                            {report.analysis_data.seo.seo_health_score || 0}/100
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Overall SEO health based on all metrics
+                      </p>
+                    </div>
+
+                    {/* Key Findings */}
+                    <div className="mt-6 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                      <p className="text-sm text-green-900 font-medium mb-2">SEO Insights:</p>
+                      <ul className="text-xs text-green-800 space-y-1">
+                        <li>• Domain Authority: {(report.analysis_data.seo.domain_authority || 0) >= 50 ? 'Strong domain authority' : 'Room for improvement in domain authority'}</li>
+                        <li>• Organic Visibility: {(report.analysis_data.seo.organic_keywords || 0) > 100 ? 'Good keyword visibility' : 'Consider expanding keyword targeting'}</li>
+                        <li>• Backlink Profile: {(report.analysis_data.seo.referring_domains || 0) > 50 ? 'Strong backlink profile' : 'Build more high-quality backlinks'}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Check if we have breakdown data */}
             {!report.score_breakdowns ? (
               <>

@@ -229,6 +229,11 @@ const Analysis = () => {
 
       if (error) {
         console.error('❌ PageSpeed Edge Function error:', error);
+        // If it's a 401/auth error, provide helpful message
+        if (error.message && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
+          console.warn('⚠️ PageSpeed auth issue - using fallback data. Please check Supabase configuration.');
+          return null; // Return null to use fallback
+        }
         throw new Error(error.message || 'PageSpeed analysis failed');
       }
 
@@ -242,7 +247,7 @@ const Analysis = () => {
 
     } catch (error) {
       console.error('❌ PageSpeed analysis failed:', error);
-      // Return null so caller knows it failed (don't return fake data!)
+      // Return null so caller knows it failed - will use fallback data
       return null;
     }
   };
@@ -258,6 +263,11 @@ const Analysis = () => {
 
       if (error) {
         console.error('❌ SEMrush Edge Function error:', error);
+        // If it's a 401/auth error, provide helpful message
+        if (error.message && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
+          console.warn('⚠️ SEMrush auth issue - using fallback data. Please check Supabase configuration.');
+          return null; // Return null to use fallback
+        }
         throw new Error(error.message || 'SEMrush analysis failed');
       }
 
@@ -271,7 +281,7 @@ const Analysis = () => {
 
     } catch (error) {
       console.error('❌ SEMrush analysis failed:', error);
-      // Return null so caller knows it failed
+      // Return null so caller knows it failed - will use fallback data
       return null;
     }
   };
@@ -437,6 +447,46 @@ const Analysis = () => {
         recommendations.push(...seoRecommendations.slice(0, 2)); // Add top 2 SEO recommendations
       }
 
+      // Generate score breakdowns for Detailed Data tab
+      const scoreBreakdowns = {
+        website: {
+          strengths: pageSpeedResults ? [
+            `Performance Score: ${pageSpeedResults.mobile.performance + pageSpeedResults.desktop.performance}/2 average`,
+            `Accessibility is well-implemented with a score of ${pageSpeedResults.mobile.accessibility}/100`,
+            `Best Practices compliance at ${Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2)}/100`
+          ] : [],
+          weaknesses: pageSpeedResults ? [
+            pageSpeedResults.mobile.performance < 70 ? 'Mobile performance needs improvement' : '',
+            pageSpeedResults.desktop.seo < 80 ? 'On-page SEO optimization could be enhanced' : '',
+            pageSpeedResults.mobile.accessibility < 80 ? 'Accessibility compliance could be improved' : ''
+          ].filter(Boolean) : []
+        },
+        social: {
+          strengths: socialMediaData.platforms.length > 0 ? [
+            `Active on ${socialMediaData.platforms.length} social media platform${socialMediaData.platforms.length > 1 ? 's' : ''}`,
+            `Total social followers: ${socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.followers || 0), 0).toLocaleString()}`,
+            `${socialMediaData.platforms.filter((p: any) => p.verified).length} verified profile${socialMediaData.platforms.filter((p: any) => p.verified).length !== 1 ? 's' : ''}`
+          ] : ['No social media profiles detected yet'],
+          weaknesses: socialMediaData.platforms.length > 0 ? [
+            socialMediaData.platforms.length < 3 ? 'Expand presence to more social platforms' : '',
+            socialMediaData.platforms.some((p: any) => p.followers < 1000) ? 'Some profiles have low follower counts' : '',
+            'Increase engagement rate through more frequent posting'
+          ].filter(Boolean) : ['No social media presence detected']
+        },
+        seo: semrushResults ? {
+          strengths: [
+            `Domain Authority: ${semrushResults.domain_authority}/100`,
+            `Ranking for ${semrushResults.organic_keywords?.toLocaleString() || 0} organic keywords`,
+            `${semrushResults.referring_domains?.toLocaleString() || 0} referring domains building link authority`
+          ],
+          weaknesses: [
+            semrushResults.domain_authority < 30 ? 'Build more high-quality backlinks to improve domain authority' : '',
+            semrushResults.organic_keywords < 100 ? 'Expand keyword targeting and create more optimized content' : '',
+            semrushResults.organic_traffic < 1000 ? 'Increase organic visibility through better SEO strategy' : ''
+          ].filter(Boolean)
+        } : undefined
+      };
+
       // Store results in localStorage for guest users or database for authenticated users
       const isGuest = localStorage.getItem('isGuestUser') === 'true';
 
@@ -452,6 +502,7 @@ const Analysis = () => {
           consistency_score: consistencyScore,
           positioning_score: positioningScore,
           analysis_data: analysisData,
+          score_breakdowns: scoreBreakdowns,
           recommendations: recommendations,
           report_status: 'completed',
           processing_completed_at: new Date().toISOString()
@@ -470,6 +521,7 @@ const Analysis = () => {
               consistency_score: consistencyScore,
               positioning_score: positioningScore,
               analysis_data: analysisData,
+              score_breakdowns: scoreBreakdowns,
               recommendations: recommendations,
               report_status: 'completed',
               processing_completed_at: new Date().toISOString()
