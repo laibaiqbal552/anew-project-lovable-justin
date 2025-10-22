@@ -146,16 +146,21 @@ async function analyzeWebsite(websiteUrl: string): Promise<WebsiteAnalysisResult
   }
 
   try {
-    // 1. SEMrush Domain Overview
-    if (semrushApiKey) {
-      await analyzeSEMrushData(domain, semrushApiKey, results)
-    }
-
-    // 2. Google PageSpeed Insights
+    // 1. Google PageSpeed Insights (MOST RELIABLE - NO KEY NEEDED)
+    console.log('Fetching Google PageSpeed Insights...')
     await analyzePageSpeed(websiteUrl, results)
 
-    // 3. Basic SEO Analysis
+    // 2. Basic SEO Analysis (from HTML content)
+    console.log('Performing basic SEO analysis...')
     await analyzeBasicSEO(websiteUrl, results)
+
+    // 3. SEMrush Domain Overview (OPTIONAL - if key exists)
+    if (semrushApiKey) {
+      console.log('Fetching SEMrush data...')
+      await analyzeSEMrushData(domain, semrushApiKey, results)
+    } else {
+      console.log('No SEMrush API key found - skipping')
+    }
 
     // 4. Calculate overall SEO score
     results.seo_score = calculateSEOScore(results)
@@ -165,8 +170,8 @@ async function analyzeWebsite(websiteUrl: string): Promise<WebsiteAnalysisResult
 
   } catch (error) {
     console.error('Error in website analysis:', error)
-    // Return mock data for demo purposes
-    return generateMockWebsiteData()
+    // DO NOT return mock data - throw error instead so client knows analysis failed
+    throw error
   }
 }
 

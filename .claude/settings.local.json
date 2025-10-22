@@ -9,7 +9,10 @@
       "Bash(node test-mypethub-detection.js)",
       "Bash(move test-mypethub-detection.js test-mypethub-detection.cjs)",
       "Bash(node test-mypethub-detection.cjs)",
-      "Bash(curl -sI \"https://www.facebook.com/share/1HKUQhBdSr/\")"
+      "Bash(curl -sI \"https://www.facebook.com/share/1HKUQhBdSr/\")",
+      "WebFetch(domain:www.semrush.com)",
+      "WebSearch",
+      "WebFetch(domain:developers.google.com)"
     ],
     "deny": [],
     "ask": []

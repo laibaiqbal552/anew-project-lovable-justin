@@ -218,64 +218,61 @@ const Analysis = () => {
   };
 
   const analyzeWebsiteWithPageSpeed = async (url: string) => {
-    const API_KEY = "AIzaSyB2ystTLit3rUhyiFx1VocCZNTbhDeWEEk";
-
     try {
-      // Use CORS proxy to bypass browser CORS restrictions
-      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-      const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=`;
+      console.log('Analyzing website with PageSpeed Insights via Edge Function...');
 
-      // Fetch data for both mobile and desktop
-      const [mobileResponse, desktopResponse] = await Promise.all([
-        fetch(`${corsProxy}${apiUrl}mobile&category=performance&category=accessibility&category=best-practices&category=seo&key=${API_KEY}`),
-        fetch(`${corsProxy}${apiUrl}desktop&category=performance&category=accessibility&category=best-practices&category=seo&key=${API_KEY}`)
-      ]);
+      // Call the backend Edge Function to fetch PageSpeed data
+      // This avoids CORS issues since the backend can make unrestricted requests
+      const { data, error } = await supabase.functions.invoke('pagespeed-analyzer', {
+        body: { url }
+      });
 
-      if (!mobileResponse.ok || !desktopResponse.ok) {
-        throw new Error("Failed to fetch PageSpeed data");
+      if (error) {
+        console.error('❌ PageSpeed Edge Function error:', error);
+        throw new Error(error.message || 'PageSpeed analysis failed');
       }
 
-      const mobileData = await mobileResponse.json();
-      const desktopData = await desktopResponse.json();
+      if (!data || !data.success) {
+        console.error('❌ PageSpeed analysis returned error:', data?.error);
+        throw new Error(data?.error || 'PageSpeed analysis failed');
+      }
 
-      // Extract scores from the API response
-      const extractScore = (data: any, category: string) => {
-        return Math.round((data.lighthouseResult?.categories?.[category]?.score || 0) * 100);
-      };
+      console.log('✅ PageSpeed analysis successful:', data.result);
+      return data.result;
 
-      // Extract loading times from the API response
-      const extractLoadingTime = (data: any) => {
-        const metrics = data.lighthouseResult?.audits;
-        const fcp = metrics?.["first-contentful-paint"]?.numericValue || 0;
-        return fcp / 1000; // Convert to seconds
-      };
-
-      return {
-        mobile: {
-          performance: extractScore(mobileData, "performance"),
-          accessibility: extractScore(mobileData, "accessibility"),
-          bestPractices: extractScore(mobileData, "best-practices"),
-          seo: extractScore(mobileData, "seo"),
-        },
-        desktop: {
-          performance: extractScore(desktopData, "performance"),
-          accessibility: extractScore(desktopData, "accessibility"),
-          bestPractices: extractScore(desktopData, "best-practices"),
-          seo: extractScore(desktopData, "seo"),
-        },
-        loadingTime: {
-          mobile: extractLoadingTime(mobileData),
-          desktop: extractLoadingTime(desktopData),
-        },
-      };
     } catch (error) {
-      console.error('PageSpeed analysis failed:', error);
-      // Return default scores if analysis fails
-      return {
-        mobile: { performance: 50, accessibility: 50, bestPractices: 50, seo: 50 },
-        desktop: { performance: 50, accessibility: 50, bestPractices: 50, seo: 50 },
-        loadingTime: { mobile: 3.0, desktop: 2.0 },
-      };
+      console.error('❌ PageSpeed analysis failed:', error);
+      // Return null so caller knows it failed (don't return fake data!)
+      return null;
+    }
+  };
+
+  const analyzeSEOWithSEMrush = async (url: string) => {
+    try {
+      console.log('Analyzing SEO with SEMrush via Edge Function...');
+
+      // Call the backend Edge Function to fetch SEMrush data
+      const { data, error } = await supabase.functions.invoke('semrush-analyzer', {
+        body: { domain: url }
+      });
+
+      if (error) {
+        console.error('❌ SEMrush Edge Function error:', error);
+        throw new Error(error.message || 'SEMrush analysis failed');
+      }
+
+      if (!data || !data.success) {
+        console.error('❌ SEMrush analysis returned error:', data?.error);
+        throw new Error(data?.error || 'SEMrush analysis failed');
+      }
+
+      console.log('✅ SEMrush analysis successful:', data.result);
+      return data.result;
+
+    } catch (error) {
+      console.error('❌ SEMrush analysis failed:', error);
+      // Return null so caller knows it failed
+      return null;
     }
   };
 
@@ -283,12 +280,22 @@ const Analysis = () => {
     try {
       console.log('Starting comprehensive brand analysis...');
 
-      // First, analyze website with PageSpeed Insights
+      // Analyze website with PageSpeed Insights and SEMrush in parallel
       let pageSpeedResults = null;
+      let semrushResults = null;
+
       if (business?.website_url) {
-        console.log('Analyzing website with PageSpeed Insights...');
-        pageSpeedResults = await analyzeWebsiteWithPageSpeed(business.website_url);
+        console.log('Running parallel analysis with PageSpeed Insights and SEMrush...');
+        const [pageSpeedRes, semrushRes] = await Promise.all([
+          analyzeWebsiteWithPageSpeed(business.website_url),
+          analyzeSEOWithSEMrush(business.website_url)
+        ]);
+
+        pageSpeedResults = pageSpeedRes;
+        semrushResults = semrushRes;
+
         console.log('PageSpeed analysis completed:', pageSpeedResults);
+        console.log('SEMrush analysis completed:', semrushResults);
       }
 
       // Get detected social media data
@@ -310,33 +317,46 @@ const Analysis = () => {
 
       // Calculate comprehensive brand scores
       const calculateWebsiteStrength = () => {
-        if (!pageSpeedResults) return 25;
-        
-        const mobileAvg = (
-          pageSpeedResults.mobile.performance + 
-          pageSpeedResults.mobile.accessibility + 
-          pageSpeedResults.mobile.bestPractices + 
-          pageSpeedResults.mobile.seo
-        ) / 4;
-        
-        const desktopAvg = (
-          pageSpeedResults.desktop.performance + 
-          pageSpeedResults.desktop.accessibility + 
-          pageSpeedResults.desktop.bestPractices + 
-          pageSpeedResults.desktop.seo
-        ) / 4;
-        
-        return Math.round((mobileAvg + desktopAvg) / 2);
+        if (!pageSpeedResults && !semrushResults) return 25;
+
+        let score = 0;
+        if (pageSpeedResults) {
+          const mobileAvg = (
+            pageSpeedResults.mobile.performance +
+            pageSpeedResults.mobile.accessibility +
+            pageSpeedResults.mobile.bestPractices +
+            pageSpeedResults.mobile.seo
+          ) / 4;
+
+          const desktopAvg = (
+            pageSpeedResults.desktop.performance +
+            pageSpeedResults.desktop.accessibility +
+            pageSpeedResults.desktop.bestPractices +
+            pageSpeedResults.desktop.seo
+          ) / 4;
+
+          score = (mobileAvg + desktopAvg) / 2;
+        }
+
+        // Enhance with SEMrush domain authority if available
+        if (semrushResults?.domain_authority) {
+          score = (score * 0.6) + (semrushResults.domain_authority * 0.4);
+        }
+
+        return Math.round(score);
       };
 
       const websiteScore = calculateWebsiteStrength();
       const socialScore = socialMediaData.score;
+      const seoScore = semrushResults?.seo_health_score || 0;
       const reputationScore = Math.round((websiteScore * 0.6 + socialScore * 0.4) * 0.8);
-      const visibilityScore = pageSpeedResults ? Math.round((pageSpeedResults.mobile.seo + pageSpeedResults.desktop.seo) / 2 * 0.9) : 20;
+      const visibilityScore = semrushResults?.search_visibility
+        ? semrushResults.search_visibility
+        : (pageSpeedResults ? Math.round((pageSpeedResults.mobile.seo + pageSpeedResults.desktop.seo) / 2 * 0.9) : 20);
       const consistencyScore = pageSpeedResults ? Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices + pageSpeedResults.mobile.accessibility + pageSpeedResults.desktop.accessibility) / 4) : 30;
       const positioningScore = Math.round((websiteScore * 0.7 + socialScore * 0.3) * 0.85);
 
-      const overallScore = Math.round((websiteScore + socialScore + reputationScore + visibilityScore + consistencyScore + positioningScore) / 6);
+      const overallScore = Math.round((websiteScore + seoScore + reputationScore + visibilityScore + consistencyScore + positioningScore) / 6);
 
       // Create comprehensive analysis data
       const analysisData = {
@@ -350,6 +370,17 @@ const Analysis = () => {
           bestPractices: Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2),
           content_quality: Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2),
           technical_issues: Math.floor(Math.random() * 5) + 1
+        } : null,
+        seo: semrushResults ? {
+          domain_authority: semrushResults.domain_authority,
+          organic_keywords: semrushResults.organic_keywords,
+          organic_traffic: semrushResults.organic_traffic,
+          backlinks_count: semrushResults.backlinks_count,
+          referring_domains: semrushResults.referring_domains,
+          authority_score: semrushResults.authority_score,
+          seo_health_score: semrushResults.seo_health_score,
+          search_visibility: semrushResults.search_visibility,
+          recommendations: semrushResults.recommendations
         } : null,
         social: {
           total_followers: socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.followers || 0), 0) || Math.floor(Math.random() * 10000) + 1000,
@@ -373,6 +404,7 @@ const Analysis = () => {
         }
       };
 
+      // Build recommendations from both APIs
       const recommendations = [
         {
           category: 'Website',
@@ -393,6 +425,17 @@ const Analysis = () => {
           impact: 'Could improve reputation score by 5-10 points'
         }
       ];
+
+      // Add SEMrush-based recommendations
+      if (semrushResults?.recommendations && Array.isArray(semrushResults.recommendations)) {
+        const seoRecommendations = semrushResults.recommendations.map((rec: string) => ({
+          category: 'SEO & Authority',
+          priority: rec.includes('high') || rec.includes('critical') ? 'High' : 'Medium',
+          action: rec,
+          impact: 'Could improve SEO health score'
+        }));
+        recommendations.push(...seoRecommendations.slice(0, 2)); // Add top 2 SEO recommendations
+      }
 
       // Store results in localStorage for guest users or database for authenticated users
       const isGuest = localStorage.getItem('isGuestUser') === 'true';
