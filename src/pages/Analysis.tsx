@@ -41,14 +41,14 @@ const Analysis = () => {
   const cancelProgressRef = useRef(false);
   const [reportId, setReportId] = useState<string | null>(null);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([
-    {
-      id: 'website',
-      title: 'Website Analysis',
-      description: 'Analyzing SEO, performance, and content quality',
-      icon: Globe,
-      status: 'pending',
-      progress: 0
-    },
+    // {
+    //   id: 'website',
+    //   title: 'Website Analysis',
+    //   description: 'Analyzing SEO, performance, and content quality',
+    //   icon: Globe,
+    //   status: 'pending',
+    //   progress: 0
+    // },
     {
       id: 'social',
       title: 'Social Media Audit',

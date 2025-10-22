@@ -144,6 +144,8 @@ const StartScan = () => {
       // SECOND: Check if this is a guest user - NEVER call Supabase for guests!
       if (isGuest) {
         console.log('Guest user detected in StartScan, skipping all auth checks');
+        setSkipAccount(true);
+        setStep(2); // Skip account creation and go to business details
         setIsCheckingAuth(false);
         return; // Exit early - don't call Supabase!
       }
@@ -156,6 +158,11 @@ const StartScan = () => {
         setIsAuthenticated(true);
         setSkipAccount(true);
         setStep(2); // Skip to Business Details step
+      } else {
+        // No user logged in - default to guest mode (skip account creation)
+        setSkipAccount(true);
+        setStep(2); // Go directly to business details
+        localStorage.setItem('isGuestUser', 'true');
       }
       setIsCheckingAuth(false);
     };
@@ -242,15 +249,8 @@ const StartScan = () => {
   const handleNext = async () => {
     setError(null);
 
-    // Validate current step
-    if (step === 1) {
-      if (skipAccount) {
-        setStep(2);
-      } else {
-        const valid = await form.trigger(["fullName", "email", "password"]);
-        if (valid) setStep(2);
-      }
-    } else if (step === 2) {
+    // Validate current step - Step 1 is now skipped, so only handle Step 2 and Step 4
+    if (step === 2) {
       const valid = await form.trigger([
         "businessName",
         "websiteUrl",
@@ -485,22 +485,22 @@ const StartScan = () => {
     }
   };
 
-  const totalSteps = isAuthenticated ? 4 : 5;
+  // Account creation step is removed, so always 4 steps total
+  // Step 2 = Business Info (Step 1 of 4)
+  // Step 3 = Social Connection (Step 2 of 4)
+  // Step 4 = Review (Step 3 of 4)
+  // Analysis = (Step 4 of 4)
+  const totalSteps = 4;
 
-  // Calculate progress value based on authentication status
-  const progressValue = isAuthenticated
-    ? step === 2
-      ? 25
+  // Calculate progress value based on current step
+  const progressValue =
+    step === 2
+      ? 25 // Business Info = 25%
+      : step === 3
+      ? 50 // Social Connection = 50%
       : step === 4
-      ? 75
-      : 50 // For logged-in users: Step 1 (Business) = 25%, Step 2 (Social) = 50%, Step 3 (Review) = 75%
-    : step === 1
-    ? 20
-    : step === 2
-    ? 40
-    : step === 4
-    ? 80
-    : 60; // For non-logged-in: Step 1 = 20%, Step 2 = 40%, Step 3 (Social) = 60%, Step 4 (Review) = 80%
+      ? 75 // Review = 75%
+      : 100; // Analysis/Complete = 100%
 
   // Show loading state while checking authentication
   if (isCheckingAuth) {
@@ -523,8 +523,8 @@ const StartScan = () => {
             Start Your Brand Equity Analysis
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            {step === 1 && "Let's start with your account details"}
             {step === 2 && "Tell us about your business"}
+            {step === 3 && "Connect your social media accounts"}
             {step === 4 && "Review your information"}
           </p>
           <div className="mt-6">
@@ -533,23 +533,19 @@ const StartScan = () => {
               className="w-full max-w-md mx-auto"
             />
             <p className="text-sm text-gray-500 mt-2">
-              {/* For logged-in users: steps are 1,2,3 (Business, Social, Review) */}
-              {/* For non-logged-in: steps are 1,2,3,4,5 (Account, Business, Social, Review, Analysis) */}
+              {/* Account creation step removed, so: */}
+              {/* Step 2 = Step 1 of 4 (Business Info) */}
+              {/* Step 3 = Step 2 of 4 (Social Connection) */}
+              {/* Step 4 = Step 3 of 4 (Review) */}
               Step{" "}
               {
-                isAuthenticated
-                  ? step === 2
-                    ? "1"
-                    : step === 4
-                    ? "3"
-                    : "2" // Logged-in: Step 2->1, Step 4->3
-                  : step === 1
-                  ? "1"
-                  : step === 2
-                  ? "2"
+                step === 2
+                  ? "1" // Business Info is now step 1
+                  : step === 3
+                  ? "2" // Social Connection is now step 2
                   : step === 4
-                  ? "4"
-                  : step // Non-logged-in: normal progression
+                  ? "3" // Review is now step 3
+                  : "4" // Analysis/Complete is step 4
               }{" "}
               of {totalSteps}
             </p>
