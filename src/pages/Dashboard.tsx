@@ -46,7 +46,14 @@ interface ScoreCardProps {
 const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, breakdown }: ScoreCardProps) => {
   const percentage = (score / maxScore) * 100;
   const [showDetails, setShowDetails] = useState(false);
-  
+
+  // Check if there's actual breakdown data to show
+  const hasBreakdownData = breakdown && (
+    (breakdown.factors && breakdown.factors.length > 0) ||
+    (breakdown.strengths && breakdown.strengths.length > 0) ||
+    (breakdown.weaknesses && breakdown.weaknesses.length > 0)
+  );
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
     if (score >= 60) return 'text-yellow-600';
@@ -59,8 +66,14 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
     return 'bg-red-100';
   };
 
+  const handleCardClick = () => {
+    if (hasBreakdownData) {
+      setShowDetails(!showDetails);
+    }
+  };
+
   return (
-    <Card className="card-hover cursor-pointer" onClick={() => setShowDetails(!showDetails)}>
+    <Card className={hasBreakdownData ? "card-hover cursor-pointer" : ""} onClick={handleCardClick}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -112,7 +125,7 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
           </div>
         </div>
         <Progress value={percentage} className="mb-2" />
-        
+
         {showDetails && breakdown && (
           <div className="mt-4 pt-4 border-t space-y-3 animate-in slide-in-from-top-2">
             <div>
@@ -125,7 +138,7 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
                 ))}
               </div>
             </div>
-            
+
             {breakdown.strengths && breakdown.strengths.length > 0 && (
               <div>
                 <h4 className="font-semibold text-sm text-green-700 mb-1">✓ Strengths:</h4>
@@ -139,7 +152,7 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
                 </ul>
               </div>
             )}
-            
+
             {breakdown.weaknesses && breakdown.weaknesses.length > 0 && (
               <div>
                 <h4 className="font-semibold text-sm text-orange-700 mb-1">⚠ Areas to Improve:</h4>
@@ -153,7 +166,7 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
                 </ul>
               </div>
             )}
-            
+
             {breakdown.improvement_areas && breakdown.improvement_areas.length > 0 && (
               <div>
                 <h4 className="font-semibold text-sm text-brand-700 mb-1">→ Next Steps:</h4>
@@ -169,10 +182,12 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
             )}
           </div>
         )}
-        
-        <p className="text-xs text-gray-500 text-center mt-3">
-          {showDetails ? '▲ Click to collapse' : '▼ Click for detailed breakdown'}
-        </p>
+
+        {hasBreakdownData && (
+          <p className="text-xs text-gray-500 text-center mt-3">
+            {showDetails ? '▲ Click to collapse' : '▼ Click for detailed breakdown'}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
