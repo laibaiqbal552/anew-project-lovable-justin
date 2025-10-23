@@ -497,17 +497,52 @@ const Analysis = () => {
         },
         social: {
           factors: ['Followers', 'Engagement', 'Posting Frequency', 'Platform Diversity'],
-          strengths: socialMediaData.platforms.length > 0 ? [
-            `Active on ${socialMediaData.platforms.length} platform${socialMediaData.platforms.length > 1 ? 's' : ''} - Good multi-channel presence`,
-            `Total followers: ${socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.followers || 0), 0).toLocaleString()} - Strong audience reach`,
-            `Verified profiles: ${socialMediaData.platforms.filter((p: any) => p.verified).length} - Enhanced credibility`,
-            `Average completeness: ${Math.round(socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.completeness || 0), 0) / Math.max(socialMediaData.platforms.length, 1))}% - Well-optimized profiles`
-          ] : ['No active social media profiles detected yet'],
-          weaknesses: socialMediaData.platforms.length > 0 ? [
-            socialMediaData.platforms.length < 3 ? 'Limited platform coverage: Expand to LinkedIn, Instagram, or TikTok' : '',
-            socialMediaData.platforms.some((p: any) => p.followers < 1000) ? 'Some profiles have low followers: Implement growth strategy' : '',
-            'Engagement rate could be higher: Post more frequently and interact with audience'
-          ].filter(Boolean) : ['No social media presence: Set up at least 3 social accounts']
+          strengths: socialMediaData.platforms.length > 0 ? (() => {
+            const totalFollowers = socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.followers || 0), 0);
+            const verifiedCount = socialMediaData.platforms.filter((p: any) => p.verified).length;
+            const avgCompleteness = Math.round(socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.completeness || 0), 0) / Math.max(socialMediaData.platforms.length, 1));
+            const result = [];
+
+            if (socialMediaData.platforms.length >= 3) {
+              result.push(`Active on ${socialMediaData.platforms.length} platforms - Good multi-channel presence`);
+            }
+            if (totalFollowers > 5000) {
+              result.push(`Total followers: ${totalFollowers.toLocaleString()} - Strong audience reach`);
+            } else if (totalFollowers > 1000) {
+              result.push(`Total followers: ${totalFollowers.toLocaleString()} - Growing audience`);
+            }
+            if (verifiedCount > 0) {
+              result.push(`Verified profiles: ${verifiedCount} - Enhanced credibility`);
+            }
+            if (avgCompleteness > 80) {
+              result.push(`Average profile completeness: ${avgCompleteness}% - Well-optimized profiles`);
+            }
+
+            return result.length > 0 ? result : ['Social media profiles detected but need optimization'];
+          })() : ['No active social media profiles detected yet'],
+          weaknesses: socialMediaData.platforms.length > 0 ? (() => {
+            const totalFollowers = socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.followers || 0), 0);
+            const verifiedCount = socialMediaData.platforms.filter((p: any) => p.verified).length;
+            const avgCompleteness = Math.round(socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.completeness || 0), 0) / Math.max(socialMediaData.platforms.length, 1));
+            const weaknesses = [];
+
+            if (socialMediaData.platforms.length < 3) {
+              weaknesses.push('Limited platform coverage: Expand to LinkedIn, Instagram, or TikTok');
+            }
+            if (totalFollowers < 1000) {
+              weaknesses.push(`Low follower count (${totalFollowers}): Implement growth strategy and consistent posting`);
+            } else if (totalFollowers < 5000) {
+              weaknesses.push('Moderate audience size: Continue growth initiatives');
+            }
+            if (verifiedCount === 0) {
+              weaknesses.push('No verified profiles: Apply for verification badges on major platforms');
+            }
+            if (avgCompleteness < 70) {
+              weaknesses.push(`Low profile completeness (${avgCompleteness}%): Add complete bios, links, and professional images`);
+            }
+
+            return weaknesses.length > 0 ? weaknesses : [];
+          })() : ['No social media presence: Set up at least 3 social accounts']
         },
         reputation: {
           factors: ['Reviews', 'Ratings', 'Sentiment', 'Response Rate'],
@@ -525,47 +560,116 @@ const Analysis = () => {
         },
         visibility: {
           factors: ['Search Rankings', 'Keyword Visibility', 'Organic Traffic', 'Search Presence'],
-          strengths: semrushResults ? [
-            `Organic keywords: ${semrushResults.organic_keywords?.toLocaleString() || 0} - Strong keyword ranking diversity`,
-            `Estimated traffic: ${semrushResults.organic_traffic?.toLocaleString() || 0} monthly - Good organic reach`,
-            `Search visibility: ${semrushResults.search_visibility || 0}/100 - Visible in search results`,
-            `Keyword distribution: Well-distributed across target topics`
-          ] : [],
-          weaknesses: semrushResults ? [
-            semrushResults.organic_keywords < 100 ? 'Limited keyword coverage: Create more target-keyword content' : '',
-            semrushResults.organic_traffic < 5000 ? 'Low organic traffic: Improve SEO and content strategy' : '',
-            semrushResults.search_visibility < 30 ? 'Low search visibility: Focus on top-priority keywords' : ''
-          ].filter(Boolean) : []
+          strengths: semrushResults && (semrushResults.organic_keywords > 0 || semrushResults.organic_traffic > 0) ? (() => {
+            const strengths = [];
+            if (semrushResults.organic_keywords > 1000) {
+              strengths.push(`Organic keywords: ${semrushResults.organic_keywords.toLocaleString()} - Excellent keyword ranking diversity`);
+            } else if (semrushResults.organic_keywords > 100) {
+              strengths.push(`Organic keywords: ${semrushResults.organic_keywords.toLocaleString()} - Good keyword coverage`);
+            }
+            if (semrushResults.organic_traffic > 10000) {
+              strengths.push(`Estimated traffic: ${semrushResults.organic_traffic.toLocaleString()} monthly - Strong organic reach`);
+            } else if (semrushResults.organic_traffic > 1000) {
+              strengths.push(`Estimated traffic: ${semrushResults.organic_traffic.toLocaleString()} monthly - Growing organic traffic`);
+            }
+            if (semrushResults.search_visibility > 50) {
+              strengths.push(`Search visibility: ${semrushResults.search_visibility}/100 - Highly visible in search results`);
+            } else if (semrushResults.search_visibility > 20) {
+              strengths.push(`Search visibility: ${semrushResults.search_visibility}/100 - Visible in search results`);
+            }
+            return strengths.length > 0 ? strengths : ['Some SEO metrics detected but need improvement'];
+          })() : [],
+          weaknesses: semrushResults ? (() => {
+            const weaknesses = [];
+            if (semrushResults.organic_keywords === 0 || semrushResults.organic_keywords < 50) {
+              weaknesses.push('No or very limited keyword coverage: Create more target-keyword content and optimize for search');
+            } else if (semrushResults.organic_keywords < 100) {
+              weaknesses.push('Limited keyword coverage: Create more target-keyword content');
+            }
+            if (semrushResults.organic_traffic === 0 || semrushResults.organic_traffic < 500) {
+              weaknesses.push('No or very low organic traffic: Improve SEO, content strategy, and backlink profile');
+            } else if (semrushResults.organic_traffic < 5000) {
+              weaknesses.push('Low organic traffic: Improve SEO and content strategy');
+            }
+            if (semrushResults.search_visibility === 0 || semrushResults.search_visibility < 10) {
+              weaknesses.push('No or very low search visibility: Focus on on-page SEO and top-priority keywords');
+            } else if (semrushResults.search_visibility < 30) {
+              weaknesses.push('Low search visibility: Focus on top-priority keywords');
+            }
+            return weaknesses.length > 0 ? weaknesses : [];
+          })() : []
         },
         consistency: {
           factors: ['Brand Messaging', 'Visual Branding', 'Voice & Tone', 'Design Standards'],
-          strengths: pageSpeedResults ? [
-            `Technical consistency: ${Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2)}/100 - Good implementation standards`,
-            `Design compliance: ${Math.round((pageSpeedResults.mobile.accessibility + pageSpeedResults.desktop.accessibility) / 2)}/100 - Consistent user experience`,
-            'Brand voice: Clear and consistent messaging',
-            'Visual identity: Strong design system'
-          ] : [],
-          weaknesses: pageSpeedResults ? [
-            pageSpeedResults.mobile.bestPractices < 80 ? 'Update design patterns to match brand guidelines' : '',
-            pageSpeedResults.mobile.accessibility < 80 ? 'Ensure color contrast and typography consistency' : '',
-            'Standardize messaging across all platforms',
-            'Create brand guidelines documentation'
-          ].filter(Boolean) : []
+          strengths: pageSpeedResults ? (() => {
+            const bestPractices = Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2);
+            const accessibility = Math.round((pageSpeedResults.mobile.accessibility + pageSpeedResults.desktop.accessibility) / 2);
+            const strengths = [];
+
+            if (bestPractices > 80) {
+              strengths.push(`Technical consistency: ${bestPractices}/100 - Excellent implementation standards`);
+            } else if (bestPractices > 60) {
+              strengths.push(`Technical consistency: ${bestPractices}/100 - Good implementation standards`);
+            }
+            if (accessibility > 80) {
+              strengths.push(`Design compliance: ${accessibility}/100 - Excellent user experience`);
+            } else if (accessibility > 60) {
+              strengths.push(`Design compliance: ${accessibility}/100 - Good user experience`);
+            }
+
+            return strengths.length > 0 ? strengths : ['Website design detected but needs improvement'];
+          })() : [],
+          weaknesses: pageSpeedResults ? (() => {
+            const bestPractices = Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2);
+            const accessibility = Math.round((pageSpeedResults.mobile.accessibility + pageSpeedResults.desktop.accessibility) / 2);
+            const weaknesses = [];
+
+            if (bestPractices < 80) {
+              weaknesses.push(`Update design patterns: Technical consistency is ${bestPractices}/100 (target 80+)`);
+            }
+            if (accessibility < 80) {
+              weaknesses.push(`Improve accessibility: Ensure color contrast and typography consistency (${accessibility}/100)`);
+            }
+            if (bestPractices < 60 || accessibility < 60) {
+              weaknesses.push('Create comprehensive brand guidelines documentation');
+            }
+
+            return weaknesses.length > 0 ? weaknesses : [];
+          })() : []
         },
         positioning: {
           factors: ['Market Differentiation', 'Competitive Advantage', 'Target Audience Clarity', 'Value Proposition'],
-          strengths: [
-            `Overall brand strength: ${websiteScore}/100 - Strong market position`,
-            `Social integration: ${socialScore}/100 - Good digital presence`,
-            `Market positioning: Competitive advantage identified`,
-            'Target audience: Well-defined and engaged'
-          ],
-          weaknesses: [
-            websiteScore < 60 ? 'Strengthen website and online presence' : '',
-            socialScore < 50 ? 'Enhance social media strategy and consistency' : '',
-            'Clarify unique value proposition',
-            'Differentiate from competitors'
-          ].filter(Boolean)
+          strengths: (() => {
+            const strengths = [];
+            if (websiteScore > 75) {
+              strengths.push(`Overall brand strength: ${websiteScore}/100 - Excellent market position`);
+            } else if (websiteScore > 60) {
+              strengths.push(`Overall brand strength: ${websiteScore}/100 - Good market position`);
+            }
+            if (socialScore > 70) {
+              strengths.push(`Social integration: ${socialScore}/100 - Strong digital presence`);
+            } else if (socialScore > 50) {
+              strengths.push(`Social integration: ${socialScore}/100 - Good digital presence`);
+            }
+            return strengths.length > 0 ? strengths : ['Brand foundation exists, needs development'];
+          })(),
+          weaknesses: (() => {
+            const weaknesses = [];
+            if (websiteScore < 60) {
+              weaknesses.push(`Strengthen website presence: Current score ${websiteScore}/100 (target 70+)`);
+            } else if (websiteScore < 75) {
+              weaknesses.push(`Improve website quality: Current score ${websiteScore}/100 (target 80+)`);
+            }
+            if (socialScore < 50) {
+              weaknesses.push(`Build social media strategy: Current score ${socialScore}/100 - Major opportunity`);
+            } else if (socialScore < 70) {
+              weaknesses.push(`Enhance social media: Current score ${socialScore}/100 (target 75+)`);
+            }
+            if (websiteScore < 60 || socialScore < 50) {
+              weaknesses.push('Clarify unique value proposition and competitive differentiation');
+            }
+            return weaknesses.length > 0 ? weaknesses : [];
+          })()
         }
       };
 
