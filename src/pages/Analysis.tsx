@@ -325,6 +325,37 @@ const Analysis = () => {
         }
       }
 
+      // Analyze reputation data
+      let reputationData = { average_rating: 0, total_reviews: 0, sentiment_score: 70, response_rate: '0%' };
+      if (business?.name) {
+        try {
+          console.log('Analyzing reputation for:', business.name);
+          const { data, error } = await supabase.functions.invoke('analyze-reputation', {
+            body: {
+              businessName: business.name,
+              websiteUrl: business.website_url,
+              address: business.address,
+              phoneNumber: business.phone,
+              reportId
+            }
+          });
+
+          if (data?.data?.analysis) {
+            reputationData = {
+              average_rating: data.data.analysis.average_rating || 0,
+              total_reviews: data.data.analysis.total_reviews || 0,
+              sentiment_score: data.data.analysis.sentiment_score || 70,
+              response_rate: (data.data.analysis.response_rate || 0) + '%'
+            };
+            console.log('Reputation analysis completed:', reputationData);
+          } else if (error) {
+            console.warn('Reputation analysis warning:', error);
+          }
+        } catch (error) {
+          console.warn('Reputation analysis failed:', error);
+        }
+      }
+
       // Calculate comprehensive brand scores
       const calculateWebsiteStrength = () => {
         if (!pageSpeedResults && !semrushResults) return 25;
@@ -393,10 +424,10 @@ const Analysis = () => {
           recommendations: semrushResults.recommendations
         } : null,
         social: {
-          total_followers: socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.followers || 0), 0) || Math.floor(Math.random() * 10000) + 1000,
+          total_followers: socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.followers || 0), 0),
           engagement_rate: socialMediaData.platforms.length > 0
             ? (socialMediaData.platforms.reduce((sum: number, p: any) => sum + (p.engagement || 0), 0) / socialMediaData.platforms.length).toFixed(2) + '%'
-            : (Math.random() * 5 + 1).toFixed(2) + '%',
+            : '0%',
           platforms_active: socialMediaData.platforms.length,
           posting_frequency: 'Regular',
           detected_platforms: socialMediaData.platforms,
@@ -407,10 +438,10 @@ const Analysis = () => {
             : 0
         },
         reputation: {
-          average_rating: (Math.random() * 1.5 + 3.5).toFixed(1),
-          total_reviews: Math.floor(Math.random() * 200) + 50,
-          sentiment_score: reputationScore,
-          response_rate: Math.floor(Math.random() * 40) + 60 + '%'
+          average_rating: reputationData.average_rating,
+          total_reviews: reputationData.total_reviews,
+          sentiment_score: reputationData.sentiment_score,
+          response_rate: reputationData.response_rate
         }
       };
 

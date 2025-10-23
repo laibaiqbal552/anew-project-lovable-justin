@@ -664,9 +664,32 @@ export class SocialMediaDetector {
   }
 
   private async enhanceProfiles(profiles: SocialMediaProfile[]): Promise<SocialMediaProfile[]> {
-    // Return profiles as-is - no random data generation
-    // Engagement and lastPost will only be set if we have real data
-    return profiles;
+    // Fetch real follower counts and engagement data for each profile
+    return Promise.all(profiles.map(async (profile) => {
+      try {
+        const enhancedProfile = { ...profile };
+
+        // Only fetch real data if we don't already have it from earlier enhancement
+        if (!enhancedProfile.followers) {
+          const realData = await this.fetchRealFollowerCount(profile.platform, profile.url);
+
+          if (realData && realData.followers > 0) {
+            enhancedProfile.followers = realData.followers;
+            enhancedProfile.engagement = realData.engagement;
+            enhancedProfile.verified = realData.verified;
+            enhancedProfile.completeness = enhancedProfile.completeness || 90;
+          } else {
+            // Keep as undefined if we can't fetch real data
+            enhancedProfile.completeness = enhancedProfile.completeness || 70;
+          }
+        }
+
+        return enhancedProfile;
+      } catch (error) {
+        console.warn(`Failed to enhance profile ${profile.url}:`, error);
+        return profile;
+      }
+    }));
   }
 
   private calculateOverallScore(profiles: SocialMediaProfile[], websiteQuality?: WebsiteQuality): number {

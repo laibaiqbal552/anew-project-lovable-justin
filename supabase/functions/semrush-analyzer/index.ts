@@ -146,18 +146,16 @@ serve(async (req) => {
       return recommendations
     }
 
-    // If no data from APIs, return fallback data
-    const hasSEMrushData = overviewData.organic_keywords > 0 || backlinksData.backlinks_count > 0
-
+    // Use real data from APIs, don't generate random fallbacks
     const result: SEMrushResult = {
-      domain_authority: backlinksData.authority_score || (hasSEMrushData ? 0 : Math.floor(Math.random() * 40) + 20),
-      organic_keywords: overviewData.organic_keywords || (hasSEMrushData ? 0 : Math.floor(Math.random() * 500) + 50),
-      organic_traffic: overviewData.organic_traffic || (hasSEMrushData ? 0 : Math.floor(Math.random() * 5000) + 500),
-      backlinks_count: backlinksData.backlinks_count || (hasSEMrushData ? 0 : Math.floor(Math.random() * 5000) + 500),
-      referring_domains: backlinksData.referring_domains || (hasSEMrushData ? 0 : Math.floor(Math.random() * 100) + 20),
-      authority_score: backlinksData.authority_score || (hasSEMrushData ? 0 : Math.floor(Math.random() * 40) + 20),
-      seo_health_score: seoHealthScore || (hasSEMrushData ? 0 : Math.floor(Math.random() * 40) + 50),
-      search_visibility: overviewData.search_visibility || (hasSEMrushData ? 0 : Math.floor(Math.random() * 50) + 30),
+      domain_authority: backlinksData.authority_score,
+      organic_keywords: overviewData.organic_keywords,
+      organic_traffic: overviewData.organic_traffic,
+      backlinks_count: backlinksData.backlinks_count,
+      referring_domains: backlinksData.referring_domains,
+      authority_score: backlinksData.authority_score,
+      seo_health_score: seoHealthScore,
+      search_visibility: overviewData.search_visibility,
       recommendations: generateRecommendations(),
     }
 
