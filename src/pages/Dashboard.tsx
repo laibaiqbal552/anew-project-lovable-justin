@@ -604,8 +604,9 @@ const Dashboard = () => {
 
         {/* Detailed Analysis */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="insights">Key Insights</TabsTrigger>
             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
             <TabsTrigger value="data">Detailed Data</TabsTrigger>
@@ -724,6 +725,190 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="reviews" className="space-y-6">
+            {/* Google Reviews */}
+            {report.analysis_data?.googleReviews && (
+              <Card className="border-l-4 border-l-red-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="h-5 w-5 text-red-600" />
+                    Google Reviews
+                  </CardTitle>
+                  <CardDescription>
+                    Business reviews from Google Maps
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {report.analysis_data.googleReviews.rating !== null ? (
+                    <>
+                      <div className="flex items-center gap-4">
+                        <div className="text-4xl font-bold text-yellow-600">
+                          {report.analysis_data.googleReviews.rating?.toFixed(1)}
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-600">
+                            {report.analysis_data.googleReviews.totalReviews || 0} reviews
+                          </div>
+                          {report.analysis_data.googleReviews.address && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {report.analysis_data.googleReviews.address}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {report.analysis_data.googleReviews.reviews && report.analysis_data.googleReviews.reviews.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          <h4 className="font-semibold text-sm">Recent Reviews</h4>
+                          {report.analysis_data.googleReviews.reviews.slice(0, 2).map((review: any, idx: number) => (
+                            <div key={idx} className="p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="flex gap-0.5">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`h-3 w-3 ${i < (review.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-xs text-gray-500">{review.author}</span>
+                              </div>
+                              <p className="text-sm text-gray-700">{review.text?.substring(0, 150)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                      No Google Reviews data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Trustpilot Reviews */}
+            {report.analysis_data?.trustpilotReviews && (
+              <Card className="border-l-4 border-l-blue-600">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="h-5 w-5 text-blue-600" />
+                    Trustpilot Reviews
+                  </CardTitle>
+                  <CardDescription>
+                    Business reviews from Trustpilot
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {report.analysis_data.trustpilotReviews.rating !== null ? (
+                    <>
+                      <div className="flex items-center gap-4">
+                        <div className="text-4xl font-bold text-yellow-600">
+                          {report.analysis_data.trustpilotReviews.rating?.toFixed(1)}
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-600">
+                            {report.analysis_data.trustpilotReviews.totalReviews || 0} reviews
+                          </div>
+                        </div>
+                      </div>
+                      {report.analysis_data.trustpilotReviews.reviews && report.analysis_data.trustpilotReviews.reviews.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          <h4 className="font-semibold text-sm">Recent Reviews</h4>
+                          {report.analysis_data.trustpilotReviews.reviews.slice(0, 2).map((review: any, idx: number) => (
+                            <div key={idx} className="p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="flex gap-0.5">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`h-3 w-3 ${i < (review.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              <p className="text-sm font-semibold text-gray-700">{review.title}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                      No Trustpilot data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Competitors Analysis */}
+            {report.analysis_data?.competitors && (
+              <Card className="border-l-4 border-l-purple-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                    Competitor Analysis
+                  </CardTitle>
+                  <CardDescription>
+                    Top competitors in your market
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {report.analysis_data.competitors.competitors && report.analysis_data.competitors.competitors.length > 0 ? (
+                    <div className="space-y-3">
+                      {report.analysis_data.competitors.competitors.map((competitor: any, idx: number) => (
+                        <div key={idx} className="p-4 border rounded-lg hover:bg-gray-50 transition">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900">{competitor.name}</h4>
+                              {competitor.rating && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <div className="flex gap-0.5">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-3 w-3 ${i < Math.floor(competitor.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="text-sm text-gray-600">{competitor.rating?.toFixed(1)} ({competitor.reviewCount || 0} reviews)</span>
+                                </div>
+                              )}
+                            </div>
+                            {competitor.website && (
+                              <a
+                                href={competitor.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                      {report.analysis_data.competitors.opportunities && report.analysis_data.competitors.opportunities.length > 0 ? (
+                        <div className="space-y-2 text-left">
+                          <p className="text-sm font-semibold">{report.analysis_data.competitors.marketPosition}</p>
+                          {report.analysis_data.competitors.opportunities.map((opp: string, idx: number) => (
+                            <p key={idx} className="text-xs text-gray-600">• {opp}</p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>No competitor data available</p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-6">
