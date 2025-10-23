@@ -61,31 +61,17 @@ serve(async (req) => {
 
     if (!mobileRes.ok || !desktopRes.ok) {
       console.error(`PageSpeed API error: mobile=${mobileRes.status}, desktop=${desktopRes.status}`)
-      // Return fallback data instead of throwing
-      console.log('Returning fallback PageSpeed data due to API error')
-      const fallbackResult: PageSpeedResult = {
-        mobile: {
-          performance: Math.floor(Math.random() * 30) + 60,
-          accessibility: Math.floor(Math.random() * 25) + 75,
-          bestPractices: Math.floor(Math.random() * 20) + 75,
-          seo: Math.floor(Math.random() * 25) + 70,
-        },
-        desktop: {
-          performance: Math.floor(Math.random() * 30) + 65,
-          accessibility: Math.floor(Math.random() * 20) + 80,
-          bestPractices: Math.floor(Math.random() * 20) + 75,
-          seo: Math.floor(Math.random() * 20) + 75,
-        },
-        loadingTime: {
-          mobile: parseFloat((Math.random() * 2 + 1).toFixed(2)),
-          desktop: parseFloat((Math.random() * 1.5).toFixed(2)),
-        },
-      }
+      // Return null values instead of random data when API fails
+      console.log('PageSpeed API unavailable - returning null data')
       return new Response(
-        JSON.stringify({ success: true, result: fallbackResult, note: 'Using fallback data due to API unavailability' }),
+        JSON.stringify({
+          success: false,
+          error: 'PageSpeed API unavailable',
+          note: 'Unable to fetch PageSpeed data - API returned an error'
+        }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
+          status: 400
         }
       )
     }

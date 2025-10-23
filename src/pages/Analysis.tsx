@@ -410,7 +410,7 @@ const Analysis = () => {
           accessibility: Math.round((pageSpeedResults.mobile.accessibility + pageSpeedResults.desktop.accessibility) / 2),
           bestPractices: Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2),
           content_quality: Math.round((pageSpeedResults.mobile.bestPractices + pageSpeedResults.desktop.bestPractices) / 2),
-          technical_issues: Math.floor(Math.random() * 5) + 1
+          technical_issues: null
         } : null,
         seo: semrushResults ? {
           domain_authority: semrushResults.domain_authority,
@@ -511,17 +511,17 @@ const Analysis = () => {
         },
         reputation: {
           factors: ['Reviews', 'Ratings', 'Sentiment', 'Response Rate'],
-          strengths: [
-            `Average rating: ${(Math.random() * 1.5 + 3.5).toFixed(1)}/5 - Strong customer satisfaction`,
-            `Response rate: ${Math.floor(Math.random() * 40) + 60}% - Actively engaging with feedback`,
-            `Sentiment score: ${reputationScore}/100 - Positive brand perception`,
+          strengths: reputationData.total_reviews > 0 ? [
+            `Average rating: ${reputationData.average_rating}/5 - Strong customer satisfaction`,
+            `Response rate: ${reputationData.response_rate} - Actively engaging with feedback`,
+            `Sentiment score: ${reputationData.sentiment_score}/100 - Positive brand perception`,
             `Review frequency: Regular - Good customer engagement`
-          ],
-          weaknesses: [
-            `Total reviews: ${Math.floor(Math.random() * 200) + 50} - Encourage more customer reviews`,
+          ] : ['No reputation data available yet'],
+          weaknesses: reputationData.total_reviews > 0 ? [
+            reputationData.total_reviews < 50 ? 'Encourage more customer reviews' : '',
             'Monitor negative sentiment: Address customer concerns promptly',
             'Increase review request frequency: Ask satisfied customers to leave reviews'
-          ]
+          ].filter(Boolean) : ['Set up Google Business Profile to start collecting reviews']
         },
         visibility: {
           factors: ['Search Rankings', 'Keyword Visibility', 'Organic Traffic', 'Search Presence'],
@@ -765,85 +765,58 @@ const Analysis = () => {
     if (!reportId || !business) return;
 
     try {
-      // Generate mock scores (in real app, this would be actual analysis results)
-      const mockScores = {
-        website_score: Math.floor(Math.random() * 30) + 60, // 60-90
-        social_score: Math.floor(Math.random() * 40) + 40,   // 40-80
-        reputation_score: Math.floor(Math.random() * 25) + 65, // 65-90
-        visibility_score: Math.floor(Math.random() * 35) + 45, // 45-80
-        consistency_score: Math.floor(Math.random() * 30) + 50, // 50-80
-        positioning_score: Math.floor(Math.random() * 20) + 60, // 60-80
-      };
-
-      const overallScore = Math.round(
-        (mockScores.website_score * 0.25) +
-        (mockScores.social_score * 0.25) +
-        (mockScores.reputation_score * 0.20) +
-        (mockScores.visibility_score * 0.15) +
-        (mockScores.consistency_score * 0.10) +
-        (mockScores.positioning_score * 0.05)
-      );
+      // When real analysis fails, mark scores as unavailable (N/A)
+      // Do not generate random/mock data to maintain data integrity
+      const unavailableScore = null;
 
       const mockAnalysisData = {
         website: {
-          seo_score: mockScores.website_score,
-          performance_score: Math.floor(Math.random() * 20) + 70,
-          content_quality: Math.floor(Math.random() * 25) + 65,
-          technical_issues: Math.floor(Math.random() * 5) + 1
+          seo_score: unavailableScore,
+          performance_score: unavailableScore,
+          content_quality: unavailableScore,
+          technical_issues: unavailableScore
         },
         social: {
-          total_followers: Math.floor(Math.random() * 10000) + 1000,
-          engagement_rate: (Math.random() * 5 + 1).toFixed(2) + '%',
-          platforms_active: 3,
-          posting_frequency: 'Regular'
+          total_followers: unavailableScore,
+          engagement_rate: 'N/A',
+          platforms_active: unavailableScore,
+          posting_frequency: 'N/A'
         },
         reputation: {
-          average_rating: (Math.random() * 1.5 + 3.5).toFixed(1),
-          total_reviews: Math.floor(Math.random() * 200) + 50,
-          sentiment_score: mockScores.reputation_score,
-          response_rate: Math.floor(Math.random() * 40) + 60 + '%'
+          average_rating: unavailableScore,
+          total_reviews: unavailableScore,
+          sentiment_score: unavailableScore,
+          response_rate: 'N/A'
         }
       };
 
       const mockRecommendations = [
         {
-          category: 'Website',
-          priority: 'High',
-          action: 'Improve page loading speed by optimizing images and enabling compression',
-          impact: 'Could improve website score by 10-15 points'
-        },
-        {
-          category: 'Social Media',
+          category: 'Analysis',
           priority: 'Medium',
-          action: 'Increase posting frequency and engage more with followers',
-          impact: 'Could boost social presence score by 8-12 points'
-        },
-        {
-          category: 'Online Reputation',
-          priority: 'High',
-          action: 'Respond to all customer reviews and address negative feedback',
-          impact: 'Could improve reputation score by 5-10 points'
+          action: 'Unable to complete full analysis. Please verify website accessibility and try again.',
+          impact: 'Ensure all APIs are properly configured and accessible'
         }
       ];
 
       await supabase
         .from('brand_reports')
         .update({
-          overall_score: overallScore,
-          website_score: mockScores.website_score,
-          social_score: mockScores.social_score,
-          reputation_score: mockScores.reputation_score,
-          visibility_score: mockScores.visibility_score,
-          consistency_score: mockScores.consistency_score,
-          positioning_score: mockScores.positioning_score,
+          overall_score: unavailableScore,
+          website_score: unavailableScore,
+          social_score: unavailableScore,
+          reputation_score: unavailableScore,
+          visibility_score: unavailableScore,
+          consistency_score: unavailableScore,
+          positioning_score: unavailableScore,
           analysis_data: mockAnalysisData,
           recommendations: mockRecommendations,
-          report_status: 'completed',
+          report_status: 'failed',
           processing_completed_at: new Date().toISOString()
         })
         .eq('id', reportId);
 
-      console.log('Report updated with results');
+      console.log('Report marked as failed - no mock data generated');
     } catch (err) {
       console.error('Error updating report:', err);
     }

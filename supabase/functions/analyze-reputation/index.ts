@@ -283,11 +283,7 @@ async function analyzeFacebookReviews(businessName: string) {
     }
 
     // This is a simplified approach - real implementation would require page ID
-    return {
-      rating: Math.random() * 2 + 3, // 3-5 range
-      count: Math.floor(Math.random() * 100) + 10,
-      recent_review: 'Facebook reviews require page admin access'
-    }
+    return null
   } catch (error) {
     console.error('Facebook reviews error:', error)
     throw error
@@ -297,12 +293,8 @@ async function analyzeFacebookReviews(businessName: string) {
 async function analyzeTrustpilotReviews(businessName: string, websiteUrl?: string) {
   try {
     // Trustpilot API would be used here
-    // For now, we'll return estimated data
-    return {
-      rating: Math.random() * 1.5 + 3.5, // 3.5-5 range
-      count: Math.floor(Math.random() * 200) + 20,
-      recent_review: 'Trustpilot integration available with API access'
-    }
+    // For now, return null - API key not configured
+    return null
   } catch (error) {
     console.error('Trustpilot reviews error:', error)
     throw error
@@ -324,18 +316,10 @@ function calculateSentimentScore(reviewSources: any): number {
 }
 
 function calculateResponseRate(reviewSources: any): number {
-  // Estimate response rate based on available data
+  // Calculate response rate based on available data
   // In real implementation, this would analyze actual response patterns
-  let hasResponses = 0
-  let totalSources = 0
-  Object.values(reviewSources).forEach((source: any) => {
-    totalSources++
-    // Estimate response likelihood based on platform and rating
-    if (source.rating > 4 || Math.random() > 0.6) {
-      hasResponses++
-    }
-  })
-  return totalSources > 0 ? Math.round((hasResponses / totalSources) * 100) : 0
+  // For now, return 0 to avoid generating random data
+  return 0
 }
 
 function extractRecentReviews(reviewSources: any): any[] {
@@ -355,50 +339,27 @@ function extractRecentReviews(reviewSources: any): any[] {
 
 function generateReputationTrends(reviewSources: any): any {
   return {
-    trend_direction: Math.random() > 0.5 ? 'improving' : 'stable',
-    monthly_review_growth: Math.random() * 20 - 10, // -10% to +10%
-    sentiment_trend: Math.random() > 0.7 ? 'positive' : 'neutral',
-    response_time_avg: Math.floor(Math.random() * 48) + 2 + ' hours'
+    trend_direction: 'N/A',
+    monthly_review_growth: null,
+    sentiment_trend: 'N/A',
+    response_time_avg: 'N/A'
   }
 }
 
 async function generateFallbackReputationAnalysis(): Promise<ReputationAnalysisResult> {
   return {
-    average_rating: Math.round((Math.random() * 1.5 + 3.5) * 10) / 10,
-    total_reviews: Math.floor(Math.random() * 200) + 50,
-    review_sources: ['Google', 'Yelp', 'Facebook'],
-    sentiment_score: Math.floor(Math.random() * 25) + 65,
-    response_rate: Math.floor(Math.random() * 40) + 60,
-    recent_reviews: [
-      {
-        platform: 'Google',
-        text: 'Great service and professional team!',
-        rating: 5,
-        date: new Date().toISOString()
-      }
-    ],
+    average_rating: 0,
+    total_reviews: 0,
+    review_sources: [],
+    sentiment_score: 0,
+    response_rate: 0,
+    recent_reviews: [],
     reputation_trends: {
-      trend_direction: 'stable',
-      monthly_review_growth: 5,
-      sentiment_trend: 'positive',
-      response_time_avg: '12 hours'
+      trend_direction: 'N/A',
+      monthly_review_growth: null,
+      sentiment_trend: 'N/A',
+      response_time_avg: 'N/A'
     },
-    review_breakdown: {
-      'Google': {
-        rating: 4.2,
-        count: 85,
-        recent_review: 'Excellent customer service'
-      },
-      'Yelp': {
-        rating: 4.0,
-        count: 32,
-        recent_review: 'Good quality work'
-      },
-      'Facebook': {
-        rating: 4.5,
-        count: 18,
-        recent_review: 'Highly recommended'
-      }
-    }
+    review_breakdown: {}
   }
 }
