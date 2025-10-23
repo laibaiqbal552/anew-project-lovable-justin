@@ -325,34 +325,47 @@ const Analysis = () => {
         }
       }
 
-      // Analyze reputation data
+      // Analyze reputation and additional metrics (Google, Trustpilot, Competitors, Social Media)
       let reputationData = { average_rating: 0, total_reviews: 0, sentiment_score: 70, response_rate: '0%' };
+      let comprehensiveAnalysisData: any = null;
+
       if (business?.name) {
         try {
-          console.log('Analyzing reputation for:', business.name);
-          const { data, error } = await supabase.functions.invoke('analyze-reputation', {
+          console.log('Starting comprehensive brand analysis for:', business.name);
+
+          // Call comprehensive analysis which includes Google Reviews, Trustpilot, Competitors, and Social Metrics
+          const { data: comprehensiveData, error: comprehensiveError } = await supabase.functions.invoke('comprehensive-brand-analysis', {
             body: {
               businessName: business.name,
               websiteUrl: business.website_url,
               address: business.address,
               phoneNumber: business.phone,
+              industry: business.industry || 'business',
+              latitude: business.latitude,
+              longitude: business.longitude,
+              socialProfiles: socialMediaData.platforms,
               reportId
             }
           });
 
-          if (data?.data?.analysis) {
-            reputationData = {
-              average_rating: data.data.analysis.average_rating || 0,
-              total_reviews: data.data.analysis.total_reviews || 0,
-              sentiment_score: data.data.analysis.sentiment_score || 70,
-              response_rate: (data.data.analysis.response_rate || 0) + '%'
-            };
-            console.log('Reputation analysis completed:', reputationData);
-          } else if (error) {
-            console.warn('Reputation analysis warning:', error);
+          if (comprehensiveData?.data) {
+            comprehensiveAnalysisData = comprehensiveData.data;
+            console.log('Comprehensive analysis completed:', comprehensiveAnalysisData);
+
+            // Extract reputation data from combined analysis
+            if (comprehensiveAnalysisData.combinedReputation) {
+              reputationData = {
+                average_rating: comprehensiveAnalysisData.combinedReputation.average_rating || 0,
+                total_reviews: comprehensiveAnalysisData.combinedReputation.total_reviews || 0,
+                sentiment_score: comprehensiveAnalysisData.combinedReputation.sentiment_score || 70,
+                response_rate: (comprehensiveAnalysisData.combinedReputation.response_rate || 0) + '%'
+              };
+            }
+          } else if (comprehensiveError) {
+            console.warn('Comprehensive analysis warning:', comprehensiveError);
           }
         } catch (error) {
-          console.warn('Reputation analysis failed:', error);
+          console.warn('Comprehensive analysis failed:', error);
         }
       }
 
@@ -442,7 +455,12 @@ const Analysis = () => {
           total_reviews: reputationData.total_reviews,
           sentiment_score: reputationData.sentiment_score,
           response_rate: reputationData.response_rate
-        }
+        },
+        // Additional metrics from comprehensive analysis
+        googleReviews: comprehensiveAnalysisData?.googleReviews || null,
+        trustpilotReviews: comprehensiveAnalysisData?.trustpilotReviews || null,
+        competitors: comprehensiveAnalysisData?.competitors || null,
+        socialMediaMetrics: comprehensiveAnalysisData?.socialMedia || null
       };
 
       // Build recommendations from both APIs
