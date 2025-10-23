@@ -12,7 +12,10 @@
       "Bash(curl -sI \"https://www.facebook.com/share/1HKUQhBdSr/\")",
       "WebFetch(domain:www.semrush.com)",
       "WebSearch",
-      "WebFetch(domain:developers.google.com)"
+      "WebFetch(domain:developers.google.com)",
+      "Read(//c/Users/Microsoft/Desktop/**)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []
