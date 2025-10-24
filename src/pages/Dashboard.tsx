@@ -1003,7 +1003,7 @@ const Dashboard = () => {
             )}
 
             {/* Competitors Analysis - Google Maps Data */}
-            {report.analysis_data?.competitors && (
+            {report.analysis_data?.competitors ? (
               <Card className="border-l-4 border-l-purple-500">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1111,7 +1111,7 @@ const Dashboard = () => {
                   )}
                 </CardContent>
               </Card>
-            )}
+            ) : null}
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-6">

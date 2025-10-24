@@ -216,9 +216,26 @@ async function fetchCompetitors(
   supabaseServiceRole: string | undefined
 ) {
   try {
-    if (!supabaseUrl || !supabaseServiceRole || !businessName || !address) {
-      console.warn('Missing data for competitor analysis')
-      return null
+    // Log for debugging
+    console.log(`Fetching competitors for: ${businessName}, Address: ${address}`)
+
+    if (!supabaseUrl || !supabaseServiceRole || !businessName) {
+      console.warn('Missing required data for competitor analysis')
+      return {
+        competitors: [],
+        searchedBusiness: { name: businessName, address: address || 'Unknown' },
+        error: 'Missing required data'
+      }
+    }
+
+    // If no address, still return empty result instead of null
+    if (!address) {
+      console.warn('No address provided for competitor analysis')
+      return {
+        competitors: [],
+        searchedBusiness: { name: businessName, address: 'Unknown' },
+        error: 'Address not provided'
+      }
     }
 
     // Step 1: Search for competitors using business name and address
@@ -237,18 +254,31 @@ async function fetchCompetitors(
     })
 
     if (!searchResponse.ok) {
-      console.warn('Competitor search failed')
-      return null
+      console.warn('Competitor search failed:', searchResponse.status)
+      return {
+        competitors: [],
+        searchedBusiness: { name: businessName, address },
+        error: 'Failed to search for competitors'
+      }
     }
 
     const searchResult = await searchResponse.json()
 
-    if (!searchResult.success || !searchResult.competitors || searchResult.competitors.length === 0) {
-      console.warn('No competitors found')
+    if (!searchResult.success) {
+      console.warn('Competitor search not successful:', searchResult.error)
+      return {
+        competitors: [],
+        searchedBusiness: searchResult.searchedBusiness || { name: businessName, address },
+        error: searchResult.error || 'Failed to get competitors'
+      }
+    }
+
+    if (!searchResult.competitors || searchResult.competitors.length === 0) {
+      console.warn('No competitors found in results')
       return {
         competitors: [],
         searchedBusiness: searchResult.searchedBusiness,
-        error: searchResult.error
+        error: 'No competitors found in this area'
       }
     }
 
@@ -293,8 +323,12 @@ async function fetchCompetitors(
       totalCompetitors: competitorsWithReviews.length
     }
   } catch (error) {
-    console.warn('Competitor analysis failed:', error)
-    return null
+    console.error('Competitor analysis failed:', error)
+    return {
+      competitors: [],
+      searchedBusiness: { name: businessName, address: address || 'Unknown' },
+      error: error instanceof Error ? error.message : 'Competitor analysis failed'
+    }
   }
 }
 
