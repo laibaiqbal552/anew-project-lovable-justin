@@ -1015,17 +1015,19 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {report.analysis_data.competitors.competitors && report.analysis_data.competitors.competitors.length > 0 ? (
+                  {report.analysis_data.competitors?.competitors && report.analysis_data.competitors.competitors.length > 0 ? (
                     <div className="space-y-4">
                       {/* Summary Stats */}
                       <div className="grid grid-cols-2 gap-3 mb-4 pb-4 border-b">
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-purple-600">{report.analysis_data.competitors.totalCompetitors || 0}</p>
+                          <p className="text-2xl font-bold text-purple-600">{report.analysis_data.competitors?.totalCompetitors || report.analysis_data.competitors.competitors?.length || 0}</p>
                           <p className="text-xs text-gray-600">Competitors Found</p>
                         </div>
                         <div className="text-center">
                           <p className="text-lg font-semibold text-gray-700">
-                            {(report.analysis_data.competitors.competitors.reduce((sum: number, c: any) => sum + (c.googleRating || 0), 0) / (report.analysis_data.competitors.competitors.length || 1)).toFixed(1)}
+                            {report.analysis_data.competitors?.competitors && report.analysis_data.competitors.competitors.length > 0
+                              ? (report.analysis_data.competitors.competitors.reduce((sum: number, c: any) => sum + (c.googleRating || c.rating || 0), 0) / report.analysis_data.competitors.competitors.length).toFixed(1)
+                              : '0'}
                           </p>
                           <p className="text-xs text-gray-600">Avg Rating</p>
                         </div>
@@ -1033,7 +1035,7 @@ const Dashboard = () => {
 
                       {/* Competitor List */}
                       <div className="space-y-3">
-                        {report.analysis_data.competitors.competitors.map((competitor: any, idx: number) => (
+                        {report.analysis_data.competitors?.competitors && report.analysis_data.competitors.competitors.map((competitor: any, idx: number) => (
                           <div key={idx} className="p-4 border rounded-lg hover:bg-purple-50 transition">
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex-1">

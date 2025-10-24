@@ -81,6 +81,13 @@ serve(async (req) => {
       try {
         const supabase = createClient(supabaseUrl, supabaseServiceRole)
 
+        // Format social media data to match Dashboard expectations
+        const socialData = socialMediaMetrics ? {
+          detected_platforms: socialMediaMetrics.detected_platforms || [],
+          total_followers: socialMediaMetrics.total_followers || 0,
+          profiles: socialMediaMetrics.profiles || []
+        } : null
+
         const { error } = await supabase
           .from('brand_reports')
           .update({
@@ -89,6 +96,7 @@ serve(async (req) => {
               trustpilotReviews,
               competitors,
               socialMedia: socialMediaMetrics,
+              social: socialData,
               combinedReputation
             },
             last_updated: new Date().toISOString()
