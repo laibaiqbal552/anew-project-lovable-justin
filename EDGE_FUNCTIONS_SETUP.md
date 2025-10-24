@@ -14,10 +14,10 @@ You need to add your API keys to Supabase's edge function secrets. Run these com
 supabase login
 
 # Set the secrets for your project
-supabase secrets set GOOGLE_MAPS_API_KEY="AIzaSyDDRTkUpoZLqZfkEobu_HV-B_efTEwYg0c"
-supabase secrets set SCRAPAPI_KEY="bdc9e397a220abac026a6568adf4e168f0a4ea6f220fc16ed152da93e38277d2"
-supabase secrets set PAGESPEED_API_KEY="AIzaSyB2ystTLit3rUhyiFx1VocCZNTbhDeWEEk"
-supabase secrets set SEMRUSH_API_KEY="e9a5541ce20bf2d487b7139e61fc4cd3"
+supabase secrets set 
+supabase secrets set 
+supabase secrets set 
+supabase secrets set 
 ```
 
 ### Step 2: Deploy Edge Functions
@@ -27,14 +27,14 @@ Deploy all the edge functions to your Supabase project:
 ```bash
 # Deploy comprehensive-brand-analysis function
 supabase functions deploy comprehensive-brand-analysis
-
-# Deploy supporting functions (if not already deployed)
 supabase functions deploy fetch-google-reviews
 supabase functions deploy fetch-trustpilot-reviews
 supabase functions deploy analyze-competitors
 supabase functions deploy fetch-social-media-metrics
 supabase functions deploy pagespeed-analyzer
 supabase functions deploy semrush-analyzer
+
+# Deploy supporting functions (if not already deployed)
 ```
 
 ### Step 3: Verify Secrets in Supabase Dashboard
