@@ -5,18 +5,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { 
-  BarChart3, 
-  Globe, 
-  Users, 
-  TrendingUp, 
-  Shield, 
-  Zap, 
-  CheckCircle, 
+import SplashScreen from '@/components/SplashScreen';
+import {
+  BarChart3,
+  Globe,
+  Users,
+  TrendingUp,
+  Shield,
+  Zap,
+  CheckCircle,
   Loader2,
   Download,
   Eye,
-  Clock
+  Clock,
+  Zap as Lightning,
+  ArrowRight
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -38,6 +41,8 @@ const Analysis = () => {
   const [overallProgress, setOverallProgress] = useState(0);
   const [, setCurrentStep] = useState(0);
   const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [currentStepName, setCurrentStepName] = useState('Initializing...');
+  const [showSplash, setShowSplash] = useState(false);
   const cancelProgressRef = useRef(false);
   const [reportId, setReportId] = useState<string | null>(null);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([
@@ -838,6 +843,7 @@ const Analysis = () => {
       steps[i].status = 'processing';
       setAnalysisSteps([...steps]);
       setCurrentStep(i);
+      setCurrentStepName(steps[i].title);
 
       // Simulate progress for current step over 20 seconds (real analysis takes time)
       for (let progress = 0; progress <= 100; progress += 10) {
@@ -980,14 +986,24 @@ const Analysis = () => {
 
   if (!user || !businessId || !business) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-brand-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading your business data...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Splash Screen Overlay */}
+      <SplashScreen
+        isVisible={showSplash}
+        progress={overallProgress}
+        currentStep={currentStepName}
+      />
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-8">
@@ -1048,26 +1064,32 @@ const Analysis = () => {
             {/* Step-by-Step Analysis */}
             <div className="space-y-3">
               {analysisSteps.map((step, idx) => (
-                <div key={step.id} className="group">
-                  <div className={`p-4 rounded-lg transition-all duration-200 ${
-                    step.status === 'completed'
-                      ? 'bg-green-50 border border-green-200'
-                      : step.status === 'processing'
-                      ? 'bg-brand-50 border border-brand-200 shadow-sm'
-                      : 'bg-gray-50 border border-gray-200'
-                  }`}>
+                <div
+                  key={step.id}
+                  className="group animate-fade-in"
+                  style={{ animationDelay: `${idx * 100}ms` }}
+                >
+                  <div
+                    className={`p-4 rounded-lg transition-all duration-300 ${
+                      step.status === 'completed'
+                        ? 'bg-green-50 border border-green-200 shadow-md'
+                        : step.status === 'processing'
+                        ? 'bg-gradient-to-r from-brand-50 to-blue-50 border border-brand-300 shadow-lg'
+                        : 'bg-gray-50 border border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
                     <div className="flex items-start gap-4">
                       {/* Step Icon and Number */}
                       <div className="flex items-center gap-3 mt-1">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm shadow-md transition-all duration-300 ${
                           step.status === 'completed'
-                            ? 'bg-green-100 text-green-700'
+                            ? 'bg-gradient-to-br from-green-400 to-green-600 text-white scale-110'
                             : step.status === 'processing'
-                            ? 'bg-brand-100 text-brand-700'
+                            ? 'bg-gradient-to-br from-brand-400 to-brand-600 text-white animate-pulse'
                             : 'bg-gray-200 text-gray-600'
                         }`}>
                           {step.status === 'completed' ? (
-                            <CheckCircle className="h-5 w-5" />
+                            <CheckCircle className="h-5 w-5 animate-scale-in" />
                           ) : step.status === 'processing' ? (
                             <Loader2 className="h-5 w-5 animate-spin" />
                           ) : (
