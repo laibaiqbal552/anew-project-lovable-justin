@@ -1604,43 +1604,36 @@ const Dashboard = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Social Media</CardTitle>
+                  <CardTitle>Social Media Followers</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-sm text-gray-600">Total Followers</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.data_quality?.social_api && typeof report.analysis_data?.social?.total_followers === 'number' ? report.analysis_data.social.total_followers.toLocaleString() : '—'}</span>
-                      {report.data_quality?.social_api ? (
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
-                          Live Data
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
-                          AI‑sourced
-                        </Badge>
-                      )}
+                <CardContent className="space-y-3">
+                  {/* Display social profiles with follower counts */}
+                  {report.analysis_data?.social?.detected_platforms && report.analysis_data.social.detected_platforms.length > 0 ? (
+                    <div className="space-y-2">
+                      {report.analysis_data.social.detected_platforms.map((platform: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-700 capitalize">{platform.platform}</span>
+                          </div>
+                          <span className="font-semibold text-gray-900">
+                            {platform.followers ? platform.followers.toLocaleString() : '—'}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-sm text-gray-600">Engagement Rate</span>
+                  ) : (
+                    <div className="text-sm text-gray-500">No social media profiles detected</div>
+                  )}
+
+                  {/* Total followers summary */}
+                  <div className="flex justify-between items-center gap-2 pt-2 border-t mt-4">
+                    <span className="text-sm font-semibold text-gray-600">Total Followers</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.data_quality?.social_api && report.analysis_data?.social?.engagement_rate ? report.analysis_data.social.engagement_rate : '—'}</span>
-                      {report.data_quality?.social_api ? (
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
-                          Live Data
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
-                          AI‑sourced
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-sm text-gray-600">Active Platforms</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.data_quality?.social_api && typeof report.analysis_data?.social?.platforms_active === 'number' ? report.analysis_data.social.platforms_active : '—'}</span>
+                      <span className="font-bold text-lg text-gray-900">
+                        {report.data_quality?.social_api && typeof report.analysis_data?.social?.total_followers === 'number'
+                          ? report.analysis_data.social.total_followers.toLocaleString()
+                          : '—'}
+                      </span>
                       {report.data_quality?.social_api ? (
                         <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
                           Live Data
@@ -1657,14 +1650,24 @@ const Dashboard = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Reputation</CardTitle>
+                  <CardTitle>Reputation & Reviews</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-3">
                   <div className="flex justify-between items-center gap-2">
                     <span className="text-sm text-gray-600">Average Rating</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.data_quality?.reputation_api && typeof report.analysis_data?.reputation?.average_rating === 'number' ? `${report.analysis_data.reputation.average_rating}/5.0` : '—'}</span>
-                      {report.data_quality?.reputation_api ? (
+                      <span className="font-medium">
+                        {report.analysis_data?.trustpilotReviews?.rating
+                          ? `${report.analysis_data.trustpilotReviews.rating.toFixed(1)}/5.0`
+                          : report.data_quality?.reputation_api && typeof report.analysis_data?.reputation?.average_rating === 'number'
+                          ? `${report.analysis_data.reputation.average_rating}/5.0`
+                          : '—'}
+                      </span>
+                      {report.analysis_data?.trustpilotReviews?.rating ? (
+                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                          Trustpilot
+                        </Badge>
+                      ) : report.data_quality?.reputation_api ? (
                         <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
                           Live Data
                         </Badge>
@@ -1675,11 +1678,22 @@ const Dashboard = () => {
                       )}
                     </div>
                   </div>
+
                   <div className="flex justify-between items-center gap-2">
                     <span className="text-sm text-gray-600">Total Reviews</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.data_quality?.reputation_api && typeof report.analysis_data?.reputation?.total_reviews === 'number' ? report.analysis_data.reputation.total_reviews : '—'}</span>
-                      {report.data_quality?.reputation_api ? (
+                      <span className="font-medium">
+                        {report.analysis_data?.trustpilotReviews?.totalReviews
+                          ? report.analysis_data.trustpilotReviews.totalReviews.toLocaleString()
+                          : report.data_quality?.reputation_api && typeof report.analysis_data?.reputation?.total_reviews === 'number'
+                          ? report.analysis_data.reputation.total_reviews
+                          : '—'}
+                      </span>
+                      {report.analysis_data?.trustpilotReviews?.totalReviews ? (
+                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                          Trustpilot
+                        </Badge>
+                      ) : report.data_quality?.reputation_api ? (
                         <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
                           Live Data
                         </Badge>
@@ -1690,21 +1704,51 @@ const Dashboard = () => {
                       )}
                     </div>
                   </div>
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-sm text-gray-600">Response Rate</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.data_quality?.reputation_api && report.analysis_data?.reputation?.response_rate ? report.analysis_data.reputation.response_rate : '—'}</span>
-                      {report.data_quality?.reputation_api ? (
+
+                  {/* Trustpilot Reviews Preview */}
+                  {report.analysis_data?.trustpilotReviews?.reviews &&
+                    report.analysis_data.trustpilotReviews.reviews.length > 0 && (
+                      <div className="mt-4 pt-4 border-t">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Recent Trustpilot Reviews</h4>
+                        <div className="space-y-2">
+                          {report.analysis_data.trustpilotReviews.reviews.slice(0, 2).map((review: any, idx: number) => (
+                            <div key={idx} className="p-2 bg-blue-50 rounded border border-blue-100">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <p className="text-xs font-medium text-gray-800">{review.title}</p>
+                                  <div className="flex gap-0.5 mt-1">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-3 w-3 ${
+                                          i < (review.rating || 0)
+                                            ? 'fill-amber-400 text-amber-400'
+                                            : 'text-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {report.data_quality?.reputation_api && (
+                    <div className="flex justify-between items-center gap-2 pt-2 border-t">
+                      <span className="text-sm text-gray-600">Response Rate</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {report.analysis_data?.reputation?.response_rate ? report.analysis_data.reputation.response_rate : '—'}
+                        </span>
                         <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
                           Live Data
                         </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
-                          AI‑sourced
-                        </Badge>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

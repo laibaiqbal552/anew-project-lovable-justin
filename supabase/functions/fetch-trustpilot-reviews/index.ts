@@ -42,7 +42,7 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           data: {
-            businessName: businessName || domain,
+            businessName: businessName || domain || 'Unknown',
             rating: null,
             totalReviews: null,
             reviews: [],
@@ -56,67 +56,100 @@ serve(async (req) => {
       )
     }
 
-    // Method 1: Search Trustpilot for business using domain
-    let trustpilotUrl = null
+    // Construct Trustpilot URLs to try
+    const trustpilotUrls = []
+
+    // Method 1: Use domain directly
     if (domain) {
+      trustpilotUrls.push(`https://www.trustpilot.com/review/${domain.replace(/^(https?:\/\/)|(www\.)/, '')}`)
+    }
+
+    // Method 2: Use business name slug
+    if (businessName) {
+      const slug = businessName.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')
+      trustpilotUrls.push(`https://www.trustpilot.com/review/${slug}`)
+    }
+
+    let scrapedData = null
+    let usedUrl = null
+
+    // Try each URL with ScrapAPI
+    for (const url of trustpilotUrls) {
       try {
-        // Search Trustpilot API for company
-        const searchUrl = `https://api.trustpilot.com/v1/business-units/find?url=${encodeURIComponent(domain)}`
-        const searchResponse = await fetch(searchUrl, {
-          headers: {
-            'Accept': 'application/json'
-          }
+        console.log(`Attempting to scrape: ${url}`)
+
+        const scrapUrl = `https://api.scrapapi.com/scrapers/trustpilot?api_key=${scrapApiKey}&url=${encodeURIComponent(url)}`
+
+        const scrapResponse = await fetch(scrapUrl, {
+          signal: AbortSignal.timeout(25000) // 25 second timeout
         })
 
-        if (searchResponse.ok) {
-          const searchData = await searchResponse.json()
-          if (searchData.id) {
-            trustpilotUrl = `https://www.trustpilot.com/review/${domain}`
+        if (scrapResponse.ok) {
+          const data = await scrapResponse.json()
+
+          // Check if we got valid data with at least a rating or reviews
+          if (data && (data.rating || data.reviewCount || data.totalReviews || data.reviews?.length)) {
+            scrapedData = data
+            usedUrl = url
+            console.log(`✅ Successfully scraped: ${url}`)
+            break
           }
+        } else {
+          console.warn(`Failed to scrape ${url}: ${scrapResponse.status}`)
         }
       } catch (error) {
-        console.warn('Trustpilot search failed:', error)
+        console.warn(`Error scraping ${url}:`, error)
+        continue
       }
     }
 
-    // Fallback: construct URL from business name
-    if (!trustpilotUrl && businessName) {
-      const slug = businessName.toLowerCase().replace(/\s+/g, '-')
-      trustpilotUrl = `https://www.trustpilot.com/review/${slug}`
+    // If no data found from scraping, provide empty response
+    if (!scrapedData) {
+      console.warn('No Trustpilot data found after trying all URLs')
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            businessName: businessName || domain || 'Unknown',
+            rating: null,
+            totalReviews: null,
+            reviews: [],
+            source: 'N/A'
+          }
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      )
     }
-
-    if (!trustpilotUrl) {
-      throw new Error('Could not construct Trustpilot URL')
-    }
-
-    console.log(`Scraping Trustpilot URL: ${trustpilotUrl}`)
-
-    // Scrape Trustpilot using ScrapAPI
-    const scrapUrl = `https://api.scrapapi.com/scrapers/trustpilot?api_key=${scrapApiKey}&url=${encodeURIComponent(trustpilotUrl)}`
-    const scrapResponse = await fetch(scrapUrl, {
-      signal: AbortSignal.timeout(30000)
-    })
-
-    if (!scrapResponse.ok) {
-      console.warn(`ScrapAPI error: ${scrapResponse.status}`)
-      throw new Error('Failed to scrape Trustpilot')
-    }
-
-    const scrapedData = await scrapResponse.json()
 
     // Extract rating and review count
-    const rating = scrapedData.rating || null
-    const totalReviews = scrapedData.reviewCount || scrapedData.totalReviews || null
+    let rating = scrapedData.rating || scrapedData.score || null
+    let totalReviews = scrapedData.reviewCount || scrapedData.totalReviews || scrapedData.total_reviews || null
+
+    // Parse rating as number if it's a string
+    if (typeof rating === 'string') {
+      rating = parseFloat(rating) || null
+    }
+
+    // Parse total reviews as number if it's a string
+    if (typeof totalReviews === 'string') {
+      totalReviews = parseInt(totalReviews, 10) || null
+    }
+
     const reviews: TrustpilotReview[] = []
 
-    // Extract top 3 reviews
+    // Extract top 5 reviews (or fewer if not available)
     if (scrapedData.reviews && Array.isArray(scrapedData.reviews)) {
-      scrapedData.reviews.slice(0, 3).forEach((review: any) => {
-        reviews.push({
-          title: review.title || review.summary || 'Review',
-          rating: review.rating || 0,
-          date: review.date || new Date().toISOString()
-        })
+      scrapedData.reviews.slice(0, 5).forEach((review: any) => {
+        if (review && review.title) {
+          reviews.push({
+            title: review.title || review.summary || 'Review',
+            rating: parseInt(review.rating, 10) || 0,
+            date: review.date || new Date().toISOString()
+          })
+        }
       })
     }
 
@@ -140,6 +173,7 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error('Trustpilot fetch error:', error)
+    // Return graceful error response
     return new Response(
       JSON.stringify({
         success: true,
