@@ -728,6 +728,17 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-6">
+            {/* Check if APIs are configured */}
+            {!report.analysis_data?.googleReviews && !report.analysis_data?.trustpilotReviews && !report.analysis_data?.competitors && (
+              <Alert className="mb-8 border-l-4 border-l-yellow-500 bg-yellow-50">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800">
+                  <strong>Reviews & Competitor Data Not Yet Available:</strong> The Review APIs need to be deployed to Supabase with proper credentials.
+                  See <strong>EDGE_FUNCTIONS_SETUP.md</strong> for deployment instructions. For now, other metrics are available in the Key Insights tab.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Google Reviews */}
             {report.analysis_data?.googleReviews && (
               <Card className="border-l-4 border-l-red-500">

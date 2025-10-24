@@ -457,11 +457,26 @@ const Analysis = () => {
           response_rate: reputationData.response_rate
         },
         // Additional metrics from comprehensive analysis
-        googleReviews: comprehensiveAnalysisData?.googleReviews || null,
-        trustpilotReviews: comprehensiveAnalysisData?.trustpilotReviews || null,
-        competitors: comprehensiveAnalysisData?.competitors || null,
-        socialMediaMetrics: comprehensiveAnalysisData?.socialMedia || null
+        // These will be populated when edge functions are deployed with API keys configured
+        googleReviews: comprehensiveAnalysisData?.googleReviews,
+        trustpilotReviews: comprehensiveAnalysisData?.trustpilotReviews,
+        competitors: comprehensiveAnalysisData?.competitors,
+        socialMediaMetrics: comprehensiveAnalysisData?.socialMedia
       };
+
+      // Ensure all expected fields exist in analysisData for Dashboard compatibility
+      if (!analysisData.googleReviews) {
+        analysisData.googleReviews = null;
+      }
+      if (!analysisData.trustpilotReviews) {
+        analysisData.trustpilotReviews = null;
+      }
+      if (!analysisData.competitors) {
+        analysisData.competitors = null;
+      }
+      if (!analysisData.socialMediaMetrics) {
+        analysisData.socialMediaMetrics = null;
+      }
 
       // Build recommendations from both APIs
       const recommendations = [
