@@ -301,19 +301,29 @@ async function fetchSocialMediaMetrics(
       return null
     }
 
-    const response = await fetch(`${supabaseUrl}/functions/v1/fetch-social-media-metrics`, {
+    // Use fetch-unified-followers for better reliability with official APIs
+    const response = await fetch(`${supabaseUrl}/functions/v1/fetch-unified-followers`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${supabaseServiceRole}`
       },
       body: JSON.stringify({
-        socialProfiles
+        profiles: socialProfiles
       })
     })
 
     if (response.ok) {
       const result = await response.json()
+
+      if (result.success && result.profiles) {
+        // Format response to match expected data structure for Dashboard
+        return {
+          detected_platforms: result.profiles,
+          total_followers: result.totalFollowers,
+          profiles: result.profiles
+        }
+      }
       return result.data || null
     }
     return null
