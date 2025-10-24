@@ -1002,7 +1002,7 @@ const Dashboard = () => {
               </Card>
             )}
 
-            {/* Competitors Analysis */}
+            {/* Competitors Analysis - Google Maps Data */}
             {report.analysis_data?.competitors && (
               <Card className="border-l-4 border-l-purple-500">
                 <CardHeader>
@@ -1011,56 +1011,99 @@ const Dashboard = () => {
                     Competitor Analysis
                   </CardTitle>
                   <CardDescription>
-                    Top competitors in your market
+                    {report.analysis_data.competitors.searchedBusiness?.name ? `Top competitors for ${report.analysis_data.competitors.searchedBusiness.name}` : 'Top competitors in your market'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {report.analysis_data.competitors.competitors && report.analysis_data.competitors.competitors.length > 0 ? (
-                    <div className="space-y-3">
-                      {report.analysis_data.competitors.competitors.map((competitor: any, idx: number) => (
-                        <div key={idx} className="p-4 border rounded-lg hover:bg-gray-50 transition">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-gray-900">{competitor.name}</h4>
-                              {competitor.rating && (
+                    <div className="space-y-4">
+                      {/* Summary Stats */}
+                      <div className="grid grid-cols-2 gap-3 mb-4 pb-4 border-b">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-purple-600">{report.analysis_data.competitors.totalCompetitors || 0}</p>
+                          <p className="text-xs text-gray-600">Competitors Found</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-semibold text-gray-700">
+                            {(report.analysis_data.competitors.competitors.reduce((sum: number, c: any) => sum + (c.googleRating || 0), 0) / (report.analysis_data.competitors.competitors.length || 1)).toFixed(1)}
+                          </p>
+                          <p className="text-xs text-gray-600">Avg Rating</p>
+                        </div>
+                      </div>
+
+                      {/* Competitor List */}
+                      <div className="space-y-3">
+                        {report.analysis_data.competitors.competitors.map((competitor: any, idx: number) => (
+                          <div key={idx} className="p-4 border rounded-lg hover:bg-purple-50 transition">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900">{competitor.name}</h4>
+                                {competitor.address && (
+                                  <p className="text-xs text-gray-500 mt-1">{competitor.address}</p>
+                                )}
+                              </div>
+                              {competitor.website && (
+                                <a
+                                  href={competitor.website}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 ml-2"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              )}
+                            </div>
+
+                            {/* Rating and Review Count */}
+                            <div className="flex items-center gap-3 mt-2">
+                              <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-3 w-3 ${i < Math.floor(competitor.googleRating || competitor.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">
+                                {(competitor.googleRating || competitor.rating || 0)?.toFixed(1)}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                ({competitor.googleReviewCount || competitor.reviewCount || 0} reviews)
+                              </span>
+                            </div>
+
+                            {/* Top Review Preview */}
+                            {competitor.reviews && competitor.reviews.length > 0 && (
+                              <div className="mt-3 p-2 bg-gray-50 rounded border border-gray-200">
+                                <p className="text-xs font-semibold text-gray-700 mb-1">Latest Review:</p>
+                                <p className="text-xs text-gray-600 line-clamp-2">{competitor.reviews[0].text}</p>
                                 <div className="flex items-center gap-2 mt-1">
                                   <div className="flex gap-0.5">
                                     {[...Array(5)].map((_, i) => (
                                       <Star
                                         key={i}
-                                        className={`h-3 w-3 ${i < Math.floor(competitor.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                        className={`h-2 w-2 ${i < (competitor.reviews[0].rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
                                       />
                                     ))}
                                   </div>
-                                  <span className="text-sm text-gray-600">{competitor.rating?.toFixed(1)} ({competitor.reviewCount || 0} reviews)</span>
+                                  <span className="text-xs text-gray-500">by {competitor.reviews[0].author}</span>
                                 </div>
-                              )}
-                            </div>
-                            {competitor.website && (
-                              <a
-                                href={competitor.website}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
+                              </div>
+                            )}
+
+                            {/* Contact Info */}
+                            {competitor.phone && (
+                              <p className="text-xs text-gray-600 mt-2">📞 {competitor.phone}</p>
                             )}
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   ) : (
-                    <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
-                      {report.analysis_data.competitors.opportunities && report.analysis_data.competitors.opportunities.length > 0 ? (
-                        <div className="space-y-2 text-left">
-                          <p className="text-sm font-semibold">{report.analysis_data.competitors.marketPosition}</p>
-                          {report.analysis_data.competitors.opportunities.map((opp: string, idx: number) => (
-                            <p key={idx} className="text-xs text-gray-600">• {opp}</p>
-                          ))}
-                        </div>
-                      ) : (
-                        <p>No competitor data available</p>
+                    <div className="p-6 bg-gray-50 rounded-lg text-center">
+                      <p className="text-gray-600 mb-2">No competitors found for your location</p>
+                      {report.analysis_data.competitors.error && (
+                        <p className="text-sm text-gray-500">{report.analysis_data.competitors.error}</p>
                       )}
                     </div>
                   )}

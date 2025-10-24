@@ -208,12 +208,13 @@ async function fetchCompetitors(
   supabaseServiceRole: string | undefined
 ) {
   try {
-    if (!supabaseUrl || !supabaseServiceRole || !industry) {
+    if (!supabaseUrl || !supabaseServiceRole || !businessName || !address) {
       console.warn('Missing data for competitor analysis')
       return null
     }
 
-    const response = await fetch(`${supabaseUrl}/functions/v1/analyze-competitors`, {
+    // Step 1: Search for competitors using business name and address
+    const searchResponse = await fetch(`${supabaseUrl}/functions/v1/fetch-competitor-search`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -221,18 +222,68 @@ async function fetchCompetitors(
       },
       body: JSON.stringify({
         businessName,
-        industry,
         address,
-        latitude,
-        longitude
+        radius: 5000,
+        limit: 5
       })
     })
 
-    if (response.ok) {
-      const result = await response.json()
-      return result.data || null
+    if (!searchResponse.ok) {
+      console.warn('Competitor search failed')
+      return null
     }
-    return null
+
+    const searchResult = await searchResponse.json()
+
+    if (!searchResult.success || !searchResult.competitors || searchResult.competitors.length === 0) {
+      console.warn('No competitors found')
+      return {
+        competitors: [],
+        searchedBusiness: searchResult.searchedBusiness,
+        error: searchResult.error
+      }
+    }
+
+    // Step 2: Fetch reviews for all competitors using their place IDs
+    const placeIds = searchResult.competitors.map((c: any) => c.placeId)
+
+    const reviewsResponse = await fetch(`${supabaseUrl}/functions/v1/fetch-competitor-reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseServiceRole}`
+      },
+      body: JSON.stringify({
+        placeIds
+      })
+    })
+
+    let competitorsWithReviews = searchResult.competitors
+
+    if (reviewsResponse.ok) {
+      const reviewsResult = await reviewsResponse.json()
+
+      if (reviewsResult.success && reviewsResult.competitorsReviews) {
+        // Merge reviews with competitor data
+        competitorsWithReviews = searchResult.competitors.map((competitor: any) => {
+          const reviews = reviewsResult.competitorsReviews.find(
+            (cr: any) => cr.placeId === competitor.placeId
+          )
+          return {
+            ...competitor,
+            reviews: reviews?.reviews || [],
+            googleRating: reviews?.rating || competitor.rating,
+            googleReviewCount: reviews?.reviewCount || competitor.reviewCount
+          }
+        })
+      }
+    }
+
+    return {
+      competitors: competitorsWithReviews,
+      searchedBusiness: searchResult.searchedBusiness,
+      totalCompetitors: competitorsWithReviews.length
+    }
   } catch (error) {
     console.warn('Competitor analysis failed:', error)
     return null
