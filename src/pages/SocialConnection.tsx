@@ -483,7 +483,7 @@ const SocialConnection = () => {
         return;
       }
 
-      console.log("Fetching followers for profiles:", supportedProfiles);
+      console.log("🔍 Fetching followers for profiles:", supportedProfiles);
 
       // Call the comprehensive-brand-analysis function which now has integrated SerpAPI
       const analysisResponse = await fetch(
@@ -505,7 +505,7 @@ const SocialConnection = () => {
 
       if (!analysisResponse.ok) {
         console.warn(
-          "Failed to fetch followers from comprehensive analysis:",
+          "❌ Failed to fetch followers from comprehensive analysis:",
           analysisResponse.status
         );
         setIsFetchingFollowers(false);
@@ -513,6 +513,7 @@ const SocialConnection = () => {
       }
 
       const analysisData = await analysisResponse.json();
+      console.log("📊 Analysis response received:", analysisData);
 
       // Extract follower data from the response
       if (
@@ -520,6 +521,10 @@ const SocialConnection = () => {
         analysisData.data?.socialMedia?.detected_platforms
       ) {
         const detectedPlatforms = analysisData.data.socialMedia.detected_platforms;
+
+        console.log("=".repeat(60));
+        console.log("🎯 SOCIAL MEDIA FOLLOWERS COUNT - STEP 2");
+        console.log("=".repeat(60));
 
         detectedPlatforms.forEach((profile: any) => {
           const key = `${profile.platform}-${profile.url}`;
@@ -531,9 +536,18 @@ const SocialConnection = () => {
           }
 
           console.log(
-            `Followers for ${profile.platform}: ${followers || "N/A"}`
+            `📱 ${profile.platform.toUpperCase()}: ${followers ? followers.toLocaleString() : "N/A"} followers`
           );
+          console.log(`   URL: ${profile.url}`);
+          if (profile.username) console.log(`   Username: @${profile.username}`);
+          console.log(`   Source: ${profile.source || "unknown"}`);
+          console.log("---");
         });
+
+        console.log("=".repeat(60));
+        console.log(`📈 TOTAL FOLLOWERS: ${total.toLocaleString()}`);
+        console.log(`✅ Processed ${detectedPlatforms.length} platform(s)`);
+        console.log("=".repeat(60));
       }
 
       setProfileFollowers(followerMap);
@@ -564,7 +578,7 @@ const SocialConnection = () => {
         );
       }
 
-      console.log("Followers updated successfully", {
+      console.log("✨ Followers updated successfully", {
         followerMap,
         total,
       });
