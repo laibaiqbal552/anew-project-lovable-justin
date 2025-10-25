@@ -343,8 +343,8 @@ async function fetchSocialMediaMetrics(
       return null
     }
 
-    // Use fetch-unified-followers for better reliability with official APIs
-    const response = await fetch(`${supabaseUrl}/functions/v1/fetch-unified-followers`, {
+    // Fetch from unified followers (YouTube, GitHub, etc.)
+    const unifiedResponse = await fetch(`${supabaseUrl}/functions/v1/fetch-unified-followers`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -355,24 +355,178 @@ async function fetchSocialMediaMetrics(
       })
     })
 
-    if (response.ok) {
-      const result = await response.json()
-
+    let unifiedProfiles: any[] = []
+    if (unifiedResponse.ok) {
+      const result = await unifiedResponse.json()
       if (result.success && result.profiles) {
-        // Format response to match expected data structure for Dashboard
-        return {
-          detected_platforms: result.profiles,
-          total_followers: result.totalFollowers,
-          profiles: result.profiles
-        }
+        unifiedProfiles = result.profiles
       }
-      return result.data || null
     }
-    return null
+
+    // Also fetch from SerpAPI for Instagram and Facebook
+    const serpAPIProfiles = await fetchSerpAPIFollowers(socialProfiles)
+
+    // Merge both results
+    const mergedProfiles = mergeFollowerData(unifiedProfiles, serpAPIProfiles)
+
+    // Calculate total followers
+    const totalFollowers = mergedProfiles.reduce((sum: number, p: any) => {
+      return sum + (p.followers || 0)
+    }, 0)
+
+    return {
+      detected_platforms: mergedProfiles,
+      total_followers: totalFollowers,
+      profiles: mergedProfiles
+    }
   } catch (error) {
     console.warn('Social media metrics fetch failed:', error)
     return null
   }
+}
+
+// Extract username from social media URL
+function extractUsernameFromUrl(url: string, platform: string): string | null {
+  try {
+    if (!url) return null
+
+    const platform_lower = platform.toLowerCase()
+
+    if (platform_lower.includes('instagram')) {
+      const match = url.match(/instagram\.com\/([^/?]+)/)
+      return match?.[1] || null
+    }
+
+    if (platform_lower.includes('facebook')) {
+      const match = url.match(/facebook\.com\/(?:pages\/[^/]+\/)?([^/?]+)/)
+      return match?.[1] || null
+    }
+
+    return null
+  } catch (error) {
+    console.log(`Failed to extract username: ${error}`)
+    return null
+  }
+}
+
+// Fetch followers from SerpAPI for Instagram and Facebook
+async function fetchSerpAPIFollowers(socialProfiles: any[]): Promise<any[]> {
+  try {
+    const serpApiKey = Deno.env.get('SERPAPI_KEY')
+    if (!serpApiKey) {
+      console.warn('SerpAPI key not configured')
+      return []
+    }
+
+    const instagramProfiles = socialProfiles.filter(p => p.platform?.toLowerCase().includes('instagram'))
+    const facebookProfiles = socialProfiles.filter(p => p.platform?.toLowerCase().includes('facebook'))
+
+    const results: any[] = []
+
+    // Fetch Instagram followers
+    for (const profile of instagramProfiles) {
+      try {
+        const username = extractUsernameFromUrl(profile.url, 'instagram')
+        if (username) {
+          const url = `https://serpapi.com/search?engine=instagram_user&username=${encodeURIComponent(username)}&api_key=${serpApiKey}`
+          const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
+
+          if (response.ok) {
+            const data = await response.json()
+            const followers = data.user_info?.followers_count || data.followers || data.followers_count
+
+            if (followers) {
+              const followerCount = typeof followers === 'string'
+                ? parseInt(followers.toString().replace(/[^\d]/g, ''), 10)
+                : followers
+
+              results.push({
+                ...profile,
+                username,
+                followers: followerCount,
+                source: 'serpapi'
+              })
+              continue
+            }
+          }
+        }
+
+        results.push({ ...profile, followers: null, error: 'Could not fetch Instagram followers' })
+      } catch (error) {
+        console.warn(`Instagram fetch failed: ${error}`)
+        results.push({ ...profile, followers: null, error: 'Instagram fetch failed' })
+      }
+    }
+
+    // Fetch Facebook followers
+    for (const profile of facebookProfiles) {
+      try {
+        const username = extractUsernameFromUrl(profile.url, 'facebook')
+        if (username) {
+          const url = `https://serpapi.com/search?engine=facebook_user&username=${encodeURIComponent(username)}&api_key=${serpApiKey}`
+          const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
+
+          if (response.ok) {
+            const data = await response.json()
+            const followers = data.page_info?.followers_count || data.followers || data.fans
+
+            if (followers) {
+              const followerCount = typeof followers === 'string'
+                ? parseInt(followers.toString().replace(/[^\d]/g, ''), 10)
+                : followers
+
+              results.push({
+                ...profile,
+                username,
+                followers: followerCount,
+                source: 'serpapi'
+              })
+              continue
+            }
+          }
+        }
+
+        results.push({ ...profile, followers: null, error: 'Could not fetch Facebook followers' })
+      } catch (error) {
+        console.warn(`Facebook fetch failed: ${error}`)
+        results.push({ ...profile, followers: null, error: 'Facebook fetch failed' })
+      }
+    }
+
+    return results
+  } catch (error) {
+    console.warn('SerpAPI followers fetch failed:', error)
+    return []
+  }
+}
+
+// Merge follower data from multiple sources
+function mergeFollowerData(unifiedProfiles: any[], serpAPIProfiles: any[]): any[] {
+  const profileMap = new Map()
+
+  // Add unified profiles
+  unifiedProfiles.forEach(p => {
+    const key = `${p.platform}-${p.url}`
+    profileMap.set(key, p)
+  })
+
+  // Add or merge SerpAPI profiles
+  serpAPIProfiles.forEach(p => {
+    const key = `${p.platform}-${p.url}`
+    if (profileMap.has(key)) {
+      // Prefer SerpAPI data if both exist
+      const existing = profileMap.get(key)
+      profileMap.set(key, {
+        ...existing,
+        ...p,
+        source: p.followers ? 'serpapi' : existing.source
+      })
+    } else {
+      profileMap.set(key, p)
+    }
+  })
+
+  return Array.from(profileMap.values())
 }
 
 function combineReputationData(googleReviews: any, trustpilotReviews: any) {
