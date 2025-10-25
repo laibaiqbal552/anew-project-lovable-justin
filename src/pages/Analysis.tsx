@@ -122,15 +122,33 @@ const Analysis = () => {
       if (isGuest) {
         // Guest mode - load business data from localStorage
         console.log('Guest mode detected, loading from localStorage');
+        const businessName = localStorage.getItem('businessName') || 'Your Business';
+        const businessWebsiteUrl = localStorage.getItem('businessWebsiteUrl') || '';
+        const businessIndustry = localStorage.getItem('businessIndustry') || '';
+        const businessAddress = localStorage.getItem('businessAddress') || '';
+        const businessPhone = localStorage.getItem('businessPhone') || '';
+        const businessDescription = localStorage.getItem('businessDescription') || '';
+
+        console.log('🔍 Loading guest business data:', {
+          businessName,
+          businessWebsiteUrl,
+          businessIndustry,
+          businessAddress,
+          businessPhone,
+          businessDescription
+        });
+
         const guestBusiness = {
           id: currentBusinessId,
-          business_name: localStorage.getItem('businessName') || 'Your Business',
-          website_url: localStorage.getItem('businessWebsiteUrl') || '',
-          industry: localStorage.getItem('businessIndustry') || '',
-          address: localStorage.getItem('businessAddress') || '',
-          phone: localStorage.getItem('businessPhone') || '',
-          description: localStorage.getItem('businessDescription') || '',
+          name: businessName,
+          business_name: businessName,
+          website_url: businessWebsiteUrl,
+          industry: businessIndustry,
+          address: businessAddress,
+          phone: businessPhone,
+          description: businessDescription,
         };
+        console.log('✅ Guest business object created:', guestBusiness);
         setBusiness(guestBusiness);
         setUser(null); // Guest users remain unauthenticated
       } else {
@@ -336,42 +354,74 @@ const Analysis = () => {
 
       if (business?.name) {
         try {
-          console.log('Starting comprehensive brand analysis for:', business.name);
-
-          // Call comprehensive analysis which includes Google Reviews, Trustpilot, Competitors, and Social Metrics
-          const { data: comprehensiveData, error: comprehensiveError } = await supabase.functions.invoke('comprehensive-brand-analysis', {
-            body: {
-              businessName: business.name,
-              websiteUrl: business.website_url,
-              address: business.address,
-              phoneNumber: business.phone,
-              industry: business.industry || 'business',
-              latitude: business.latitude,
-              longitude: business.longitude,
-              socialProfiles: socialMediaData.platforms,
-              reportId
-            }
+          console.log('🚀 STARTING COMPREHENSIVE ANALYSIS');
+          console.log('📍 Business Data:', {
+            businessName: business.name,
+            address: business.address,
+            industry: business.industry,
+            websiteUrl: business.website_url,
+            hasAddress: !!business.address,
+            hasIndustry: !!business.industry
           });
 
-          if (comprehensiveData?.data) {
-            comprehensiveAnalysisData = comprehensiveData.data;
-            console.log('Comprehensive analysis completed:', comprehensiveAnalysisData);
+          // IMPORTANT: Only call if we have address and industry
+          if (!business.address || !business.industry) {
+            console.warn('⚠️ SKIPPING COMPREHENSIVE ANALYSIS: Missing address or industry');
+            console.warn('   Address:', business.address || 'MISSING');
+            console.warn('   Industry:', business.industry || 'MISSING');
+          } else {
+            console.log('✅ Address and industry present, calling comprehensive-brand-analysis...');
 
-            // Extract reputation data from combined analysis
-            if (comprehensiveAnalysisData.combinedReputation) {
-              reputationData = {
-                average_rating: comprehensiveAnalysisData.combinedReputation.average_rating || 0,
-                total_reviews: comprehensiveAnalysisData.combinedReputation.total_reviews || 0,
-                sentiment_score: comprehensiveAnalysisData.combinedReputation.sentiment_score || 70,
-                response_rate: (comprehensiveAnalysisData.combinedReputation.response_rate || 0) + '%'
-              };
+            // Call comprehensive analysis which includes Google Reviews, Trustpilot, Competitors, and Social Metrics
+            const { data: comprehensiveData, error: comprehensiveError } = await supabase.functions.invoke('comprehensive-brand-analysis', {
+              body: {
+                businessName: business.name,
+                websiteUrl: business.website_url,
+                address: business.address,
+                phoneNumber: business.phone,
+                industry: business.industry || 'business',
+                latitude: business.latitude,
+                longitude: business.longitude,
+                socialProfiles: socialMediaData.platforms,
+                reportId
+              }
+            });
+
+            console.log('📡 RESPONSE FROM EDGE FUNCTION:', {
+              hasData: !!comprehensiveData,
+              hasError: !!comprehensiveError,
+              comprehensiveError
+            });
+
+            if (comprehensiveData?.data) {
+              comprehensiveAnalysisData = comprehensiveData.data;
+              console.log('✅ COMPREHENSIVE ANALYSIS COMPLETED');
+              console.log('📊 FULL RESPONSE DATA:', JSON.stringify(comprehensiveAnalysisData, null, 2).substring(0, 1000));
+              console.log('🏢 Competitors object:', comprehensiveAnalysisData.competitors);
+              console.log('🏢 Competitors found:', comprehensiveAnalysisData.competitors?.competitors?.length || 0);
+              console.log('⭐ Google Reviews:', comprehensiveAnalysisData.googleReviews);
+              console.log('⭐ Trustpilot Reviews:', comprehensiveAnalysisData.trustpilotReviews);
+
+              // Extract reputation data from combined analysis
+              if (comprehensiveAnalysisData.combinedReputation) {
+                reputationData = {
+                  average_rating: comprehensiveAnalysisData.combinedReputation.average_rating || 0,
+                  total_reviews: comprehensiveAnalysisData.combinedReputation.total_reviews || 0,
+                  sentiment_score: comprehensiveAnalysisData.combinedReputation.sentiment_score || 70,
+                  response_rate: (comprehensiveAnalysisData.combinedReputation.response_rate || 0) + '%'
+                };
+              }
+            } else if (comprehensiveError) {
+              console.warn('⚠️ COMPREHENSIVE ANALYSIS ERROR:', comprehensiveError);
+            } else {
+              console.warn('⚠️ NO DATA RETURNED FROM COMPREHENSIVE ANALYSIS');
             }
-          } else if (comprehensiveError) {
-            console.warn('Comprehensive analysis warning:', comprehensiveError);
           }
         } catch (error) {
-          console.warn('Comprehensive analysis failed:', error);
+          console.warn('❌ COMPREHENSIVE ANALYSIS EXCEPTION:', error);
         }
+      } else {
+        console.warn('⚠️ NO BUSINESS NAME - SKIPPING COMPREHENSIVE ANALYSIS');
       }
 
       // Calculate comprehensive brand scores

@@ -36,3 +36,18 @@ verify_jwt = false
 
 [functions.generate-pdf-report]
 verify_jwt = false
+
+[functions.comprehensive-brand-analysis]
+verify_jwt = false
+
+[functions.fetch-competitor-search]
+verify_jwt = false
+
+[functions.fetch-competitor-reviews]
+verify_jwt = false
+
+[functions.fetch-google-reviews]
+verify_jwt = false
+
+[functions.fetch-trustpilot-reviews]
+verify_jwt = false

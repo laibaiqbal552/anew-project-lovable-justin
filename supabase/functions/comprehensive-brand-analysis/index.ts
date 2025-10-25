@@ -27,6 +27,32 @@ interface BrandAnalysisResult {
   combinedReputation: any
 }
 
+// Function to sanitize address - remove special characters and normalize
+function sanitizeAddress(address: string): string {
+  if (!address) return address
+
+  // Replace Arabic comma (،) with regular comma
+  let cleaned = address.replace(/،/g, ',')
+
+  // Remove extra spaces
+  cleaned = cleaned.replace(/\s+/g, ' ').trim()
+
+  // Remove leading/trailing commas and spaces
+  cleaned = cleaned.replace(/^[\s,]+|[\s,]+$/g, '').trim()
+
+  // Remove duplicate commas
+  cleaned = cleaned.replace(/,+/g, ',')
+
+  // Remove space before comma
+  cleaned = cleaned.replace(/\s+,/g, ',')
+
+  console.log(`🧹 Address sanitization:`)
+  console.log(`   Before: "${address}"`)
+  console.log(`   After: "${cleaned}"`)
+
+  return cleaned
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -52,16 +78,30 @@ serve(async (req) => {
 
     console.log(`Starting comprehensive brand analysis for: ${businessName}`)
 
+    // Sanitize address if provided
+    const sanitizedAddress = address ? sanitizeAddress(address) : address
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceRole = Deno.env.get('SUPABASE_SERVICE_ROLE')
+    const supabaseServiceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    console.log('🔐 ENVIRONMENT VARIABLES CHECK:')
+    console.log('  SUPABASE_URL:', supabaseUrl ? '✅ Set' : '❌ NOT SET')
+    console.log('  SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceRole ? '✅ Set' : '❌ NOT SET')
 
     // Fetch all data in parallel
     const [googleReviews, trustpilotReviews, competitors, socialMediaMetrics] = await Promise.all([
-      fetchGoogleReviews(businessName, address, websiteUrl, supabaseUrl, supabaseServiceRole),
+      fetchGoogleReviews(businessName, sanitizedAddress, websiteUrl, supabaseUrl, supabaseServiceRole),
       fetchTrustpilotReviews(businessName, websiteUrl, supabaseUrl, supabaseServiceRole),
-      fetchCompetitors(businessName, industry, address, latitude, longitude, supabaseUrl, supabaseServiceRole),
+      fetchCompetitors(businessName, industry, sanitizedAddress, latitude, longitude, supabaseUrl, supabaseServiceRole),
       fetchSocialMediaMetrics(socialProfiles, supabaseUrl, supabaseServiceRole)
     ])
+
+    // Log results for debugging
+    console.log('📊 Analysis Results:')
+    console.log('  Google Reviews:', googleReviews ? '✅ Found' : '❌ Not found')
+    console.log('  Trustpilot Reviews:', trustpilotReviews ? '✅ Found' : '❌ Not found')
+    console.log('  Competitors:', competitors?.competitors?.length || 0, 'found')
+    console.log('  Social Metrics:', socialMediaMetrics ? '✅ Found' : '❌ Not found')
 
     // Combine and analyze reputation from multiple sources
     const combinedReputation = combineReputationData(googleReviews, trustpilotReviews)
@@ -75,6 +115,7 @@ serve(async (req) => {
     }
 
     console.log('✅ Comprehensive brand analysis completed')
+    console.log('📤 Returning:', JSON.stringify(result, null, 2).substring(0, 500))
 
     // Update database if reportId provided
     if (reportId && supabaseUrl && supabaseServiceRole) {
@@ -217,10 +258,11 @@ async function fetchCompetitors(
 ) {
   try {
     // Log for debugging
-    console.log(`Fetching competitors for: ${businessName}, Address: ${address}`)
+    console.log(`🔍 Fetching competitors for: ${businessName}, Address: ${address}, Industry: ${industry}`)
 
     if (!supabaseUrl || !supabaseServiceRole || !businessName) {
-      console.warn('Missing required data for competitor analysis')
+      console.warn('⚠️ Missing required data for competitor analysis')
+      console.warn('  supabaseUrl:', !!supabaseUrl, 'supabaseServiceRole:', !!supabaseServiceRole, 'businessName:', businessName)
       return {
         competitors: [],
         searchedBusiness: { name: businessName, address: address || 'Unknown' },
@@ -230,7 +272,7 @@ async function fetchCompetitors(
 
     // If no address, still return empty result instead of null
     if (!address) {
-      console.warn('No address provided for competitor analysis')
+      console.warn('⚠️ No address provided for competitor analysis')
       return {
         competitors: [],
         searchedBusiness: { name: businessName, address: 'Unknown' },
@@ -238,7 +280,8 @@ async function fetchCompetitors(
       }
     }
 
-    // Step 1: Search for competitors using business name and address
+    // Step 1: Search for competitors using business name, address, and industry
+    console.log(`📍 Calling fetch-competitor-search with: businessName=${businessName}, address=${address}, industry=${industry}`)
     const searchResponse = await fetch(`${supabaseUrl}/functions/v1/fetch-competitor-search`, {
       method: 'POST',
       headers: {
@@ -248,24 +291,29 @@ async function fetchCompetitors(
       body: JSON.stringify({
         businessName,
         address,
+        industry,
         radius: 5000,
-        limit: 5
+        limit: 15
       })
     })
 
+    console.log(`📡 fetch-competitor-search response status: ${searchResponse.status}`)
+
     if (!searchResponse.ok) {
-      console.warn('Competitor search failed:', searchResponse.status)
+      const errorText = await searchResponse.text()
+      console.warn('❌ Competitor search failed:', searchResponse.status, errorText)
       return {
         competitors: [],
         searchedBusiness: { name: businessName, address },
-        error: 'Failed to search for competitors'
+        error: `Failed to search for competitors (${searchResponse.status})`
       }
     }
 
     const searchResult = await searchResponse.json()
+    console.log(`✅ Competitor search response:`, JSON.stringify(searchResult).substring(0, 200))
 
     if (!searchResult.success) {
-      console.warn('Competitor search not successful:', searchResult.error)
+      console.warn('❌ Competitor search not successful:', searchResult.error)
       return {
         competitors: [],
         searchedBusiness: searchResult.searchedBusiness || { name: businessName, address },
@@ -274,7 +322,7 @@ async function fetchCompetitors(
     }
 
     if (!searchResult.competitors || searchResult.competitors.length === 0) {
-      console.warn('No competitors found in results')
+      console.warn('⚠️ No competitors found in results')
       return {
         competitors: [],
         searchedBusiness: searchResult.searchedBusiness,
@@ -282,8 +330,11 @@ async function fetchCompetitors(
       }
     }
 
+    console.log(`🎯 Found ${searchResult.competitors.length} competitors`)
+
     // Step 2: Fetch reviews for all competitors using their place IDs
     const placeIds = searchResult.competitors.map((c: any) => c.placeId)
+    console.log(`📋 Fetching reviews for ${placeIds.length} competitors`)
 
     const reviewsResponse = await fetch(`${supabaseUrl}/functions/v1/fetch-competitor-reviews`, {
       method: 'POST',
@@ -296,10 +347,13 @@ async function fetchCompetitors(
       })
     })
 
+    console.log(`📡 fetch-competitor-reviews response status: ${reviewsResponse.status}`)
+
     let competitorsWithReviews = searchResult.competitors
 
     if (reviewsResponse.ok) {
       const reviewsResult = await reviewsResponse.json()
+      console.log(`✅ Reviews fetched:`, reviewsResult.success ? 'Success' : 'Failed', reviewsResult.competitorsReviews?.length || 0, 'items')
 
       if (reviewsResult.success && reviewsResult.competitorsReviews) {
         // Merge reviews with competitor data
@@ -314,16 +368,21 @@ async function fetchCompetitors(
             googleReviewCount: reviews?.reviewCount || competitor.reviewCount
           }
         })
+        console.log(`🔗 Merged reviews with ${competitorsWithReviews.length} competitors`)
       }
+    } else {
+      console.warn(`⚠️ Reviews fetch failed with status ${reviewsResponse.status}`)
     }
 
-    return {
+    const result = {
       competitors: competitorsWithReviews,
       searchedBusiness: searchResult.searchedBusiness,
       totalCompetitors: competitorsWithReviews.length
     }
+    console.log(`✅ Returning competitors result:`, JSON.stringify(result).substring(0, 200))
+    return result
   } catch (error) {
-    console.error('Competitor analysis failed:', error)
+    console.error('❌ Competitor analysis failed:', error)
     return {
       competitors: [],
       searchedBusiness: { name: businessName, address: address || 'Unknown' },

@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useLoadScript, StandaloneSearchBox } from "@react-google-maps/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,13 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -99,43 +93,9 @@ const scanSchema = z.object({
 
 type ScanForm = z.infer<typeof scanSchema>;
 
-const industries = [
-  "HVAC",
-  "Pest Control",
-  "Plumbing",
-  "Electrical",
-  "Roofing",
-  "Landscaping & Lawn Care",
-  "Carpet Cleaning",
-  "House Cleaning",
-  "Window Cleaning",
-  "Garage Door Services",
-  "Painting",
-  "Handyman Services",
-  "Appliance Repair",
-  "Lock & Security",
-  "Pool & Spa Services",
-  "Junk Removal",
-  "Moving Services",
-  "General Contracting",
-  "Flooring",
-  "Kitchen & Bath Remodeling",
-  "Siding",
-  "Gutter Services",
-  "Pressure Washing",
-  "Tree Services",
-  "Snow Removal",
-  "Septic Services",
-  "Well Services",
-  "Foundation Repair",
-  "Insulation",
-  "Waterproofing",
-  "Home Inspection",
-  "Other Home Services",
-];
-
 const StartScan = () => {
   const navigate = useNavigate();
+  const searchBoxRef = useRef<any>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -143,6 +103,13 @@ const StartScan = () => {
   const [skipAccount, setSkipAccount] = useState(false);
   const [reviewData, setReviewData] = useState<ScanForm | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Load Google Maps with Places API
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: googleMapsApiKey || "",
+    libraries: ["places"],
+  });
 
   // Check if user is already logged in AND if returning from social media
   useEffect(() => {
@@ -220,6 +187,17 @@ const StartScan = () => {
       description: "",
     },
   });
+
+  // Handle place selection from StandaloneSearchBox
+  const handlePlacesChanged = () => {
+    const places = searchBoxRef.current?.getPlaces();
+    if (places && places.length > 0) {
+      const place = places[0];
+      const formatted_address = place.formatted_address;
+      console.log("✅ Place selected:", formatted_address);
+      form.setValue("address", formatted_address);
+    }
+  };
 
   const handleSkipAccount = () => {
     setSkipAccount(true);
@@ -826,22 +804,12 @@ const StartScan = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="industry">Industry *</Label>
-                      <Select
-                        onValueChange={(value) =>
-                          form.setValue("industry", value)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your industry" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {industries.map((industry) => (
-                            <SelectItem key={industry} value={industry}>
-                              {industry}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        id="industry"
+                        {...form.register("industry")}
+                        placeholder="e.g., Pest Control, HVAC, Plumbing"
+                        disabled={isLoading}
+                      />
                       {form.formState.errors.industry && (
                         <p className="text-sm text-destructive">
                           {form.formState.errors.industry.message}
@@ -885,12 +853,33 @@ const StartScan = () => {
                       <MapPin className="h-4 w-4" />
                       Business Address *
                     </Label>
-                    <Input
-                      id="address"
-                      {...form.register("address")}
-                      placeholder="123 Main Street, City, State, ZIP"
-                      disabled={isLoading}
-                    />
+                    {isLoaded && (
+                      <StandaloneSearchBox
+                        onPlacesChanged={handlePlacesChanged}
+                        onLoad={(ref) => {
+                          searchBoxRef.current = ref;
+                        }}
+                      >
+                        <input
+                          type="text"
+                          placeholder="Start typing an address..."
+                          {...form.register("address")}
+                          style={{
+                            boxSizing: `border-box`,
+                            border: `1px solid #e5e7eb`,
+                            width: `100%`,
+                            height: `40px`,
+                            padding: `0 12px`,
+                            borderRadius: `6px`,
+                            fontSize: `14px`,
+                            outline: `none`,
+                          }}
+                          disabled={isLoading}
+                          autoComplete="off"
+                        />
+                      </StandaloneSearchBox>
+                    )}
+
                     {form.formState.errors.address && (
                       <p className="text-sm text-destructive">
                         {form.formState.errors.address.message}

@@ -48,7 +48,7 @@ serve(async (req) => {
   }
 
   try {
-    const { businessName, address, radius = 5000, limit = 5 } = await req.json()
+    const { businessName, address, industry, radius = 5000, limit = 15 } = await req.json()
 
     if (!businessName || !address) {
       return new Response(
@@ -75,7 +75,9 @@ serve(async (req) => {
     }
 
     // Step 1: Geocode the business address to get coordinates
+    console.log(`🗺️ Geocoding address: "${address}"`)
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${googleMapsApiKey}`
+    console.log(`🔗 Geocode URL: ${geocodeUrl.substring(0, 100)}...`)
 
     const geocodeResponse = await fetch(geocodeUrl, {
       signal: AbortSignal.timeout(8000)
@@ -83,14 +85,24 @@ serve(async (req) => {
 
     const geocodeData = await geocodeResponse.json()
 
+    console.log(`📍 Geocoding response status: ${geocodeData.status}`)
+    console.log(`📊 Geocoding error_message: ${geocodeData.error_message || 'none'}`)
+    console.log(`📊 Geocoding results count: ${geocodeData.results?.length || 0}`)
+
+    if (geocodeData.results && geocodeData.results.length > 0) {
+      console.log(`📍 Geocoded coordinates: ${geocodeData.results[0].geometry.location.lat}, ${geocodeData.results[0].geometry.location.lng}`)
+      console.log(`📍 Formatted address (from geocode): ${geocodeData.results[0].formatted_address}`)
+    }
+
     if (geocodeData.status !== 'OK' || !geocodeData.results || geocodeData.results.length === 0) {
-      console.error('Geocoding failed:', geocodeData.error_message || geocodeData.status)
+      console.error('❌ Geocoding failed:', geocodeData.error_message || geocodeData.status)
+      console.error(`❌ Full geocoding response:`, JSON.stringify(geocodeData).substring(0, 500))
       return new Response(
         JSON.stringify({
           success: true,
           competitors: [],
           searchedBusiness: { name: businessName, address },
-          error: 'Could not geocode address'
+          error: `Could not geocode address: ${geocodeData.error_message || geocodeData.status}`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
@@ -99,7 +111,10 @@ serve(async (req) => {
     const { lat, lng } = geocodeData.results[0].geometry.location
 
     // Step 2: Search for nearby businesses (competitors) using Nearby Search
-    const nearbySearchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&keyword=${encodeURIComponent(businessName)}&key=${googleMapsApiKey}`
+    // Use industry keyword if available for more targeted results
+    const searchKeyword = industry ? `${industry} ${businessName}` : businessName
+    console.log(`🔍 Searching for: "${searchKeyword}" at coordinates ${lat}, ${lng} with radius ${radius}m`)
+    const nearbySearchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&keyword=${encodeURIComponent(searchKeyword)}&key=${googleMapsApiKey}`
 
     const nearbyResponse = await fetch(nearbySearchUrl, {
       signal: AbortSignal.timeout(8000)
@@ -107,17 +122,31 @@ serve(async (req) => {
 
     const nearbyData: GooglePlacesSearchResult = await nearbyResponse.json()
 
+    console.log(`📡 Nearby search response status: ${nearbyData.status}`)
+    if (nearbyData.results) {
+      console.log(`📊 Found ${nearbyData.results.length} results from Nearby Search`)
+    }
+
     if (nearbyData.status !== 'OK') {
-      console.error('Nearby search failed:', nearbyData.error_message || nearbyData.status)
+      console.error('❌ Nearby search failed:', nearbyData.error_message || nearbyData.status)
       return new Response(
         JSON.stringify({
           success: true,
           competitors: [],
           searchedBusiness: { name: businessName, address },
-          error: 'Failed to search for competitors'
+          error: `Nearby search failed: ${nearbyData.error_message || nearbyData.status}`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
+    }
+
+    // Log the raw results before filtering
+    console.log(`📋 Raw results from Google Maps: ${nearbyData.results.length} total places`)
+    if (nearbyData.results.length > 0) {
+      console.log(`📝 First 3 results:`)
+      nearbyData.results.slice(0, 3).forEach((place, idx) => {
+        console.log(`   ${idx + 1}. ${place.name} - Rating: ${place.rating}, Reviews: ${place.user_ratings_total}`)
+      })
     }
 
     // Step 3: Filter and format competitors (exclude the original business)
@@ -137,6 +166,16 @@ serve(async (req) => {
         website: place.website,
         businessType: place.types?.[0]?.replace(/_/g, ' '),
       }))
+
+    console.log(`✅ Filtered to ${competitors.length} competitors (after excluding original business)`)
+    if (competitors.length > 0) {
+      console.log(`🏆 Top competitor: ${competitors[0].name} (${competitors[0].reviewCount} reviews, rating: ${competitors[0].rating})`)
+    } else {
+      console.log(`⚠️ No competitors found after filtering`)
+      console.log(`   Total results: ${nearbyData.results.length}`)
+      console.log(`   Business name to filter: "${businessName}"`)
+      console.log(`   First result: "${nearbyData.results[0]?.name || 'N/A'}"`)
+    }
 
     return new Response(
       JSON.stringify({

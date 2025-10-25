@@ -15,7 +15,10 @@
       "WebFetch(domain:developers.google.com)",
       "Read(//c/Users/Microsoft/Desktop/**)",
       "Bash(dir:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(npx supabase:*)",
+      "Read(//c/Users/Microsoft/**)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

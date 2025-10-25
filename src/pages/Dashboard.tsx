@@ -608,9 +608,10 @@ const Dashboard = () => {
 
         {/* Detailed Analysis */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
+            <TabsTrigger value="competitors">Competitors</TabsTrigger>
             <TabsTrigger value="insights">Key Insights</TabsTrigger>
             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
             <TabsTrigger value="data">Detailed Data</TabsTrigger>
@@ -1002,6 +1003,9 @@ const Dashboard = () => {
               </Card>
             )}
 
+          </TabsContent>
+
+          <TabsContent value="competitors" className="space-y-6">
             {/* Competitors Analysis - Google Maps Data */}
             {report.analysis_data?.competitors ? (
               <Card className="border-l-4 border-l-purple-500">
@@ -1074,21 +1078,30 @@ const Dashboard = () => {
                               </span>
                             </div>
 
-                            {/* Top Review Preview */}
+                            {/* Reviews Section */}
                             {competitor.reviews && competitor.reviews.length > 0 && (
-                              <div className="mt-3 p-2 bg-gray-50 rounded border border-gray-200">
-                                <p className="text-xs font-semibold text-gray-700 mb-1">Latest Review:</p>
-                                <p className="text-xs text-gray-600 line-clamp-2">{competitor.reviews[0].text}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <div className="flex gap-0.5">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-2 w-2 ${i < (competitor.reviews[0].rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                                      />
-                                    ))}
-                                  </div>
-                                  <span className="text-xs text-gray-500">by {competitor.reviews[0].author}</span>
+                              <div className="mt-3 space-y-2">
+                                <p className="text-xs font-semibold text-gray-700">
+                                  Reviews ({competitor.reviews.length})
+                                </p>
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                  {competitor.reviews.map((review: any, reviewIdx: number) => (
+                                    <div key={reviewIdx} className="p-2 bg-gray-50 rounded border border-gray-200 text-xs">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <div className="flex gap-0.5">
+                                          {[...Array(5)].map((_, i) => (
+                                            <Star
+                                              key={i}
+                                              className={`h-2 w-2 ${i < (review.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                            />
+                                          ))}
+                                        </div>
+                                        <span className="text-gray-600 font-medium">{review.rating}/5</span>
+                                      </div>
+                                      <p className="text-gray-600 line-clamp-2">{review.text}</p>
+                                      <p className="text-gray-500 mt-1">— {review.author}</p>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
@@ -1111,7 +1124,22 @@ const Dashboard = () => {
                   )}
                 </CardContent>
               </Card>
-            ) : null}
+            ) : (
+              <Card className="border-l-4 border-l-purple-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                    Competitor Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-6 bg-gray-50 rounded-lg text-center">
+                    <p className="text-gray-600 mb-2">No competitor data available yet</p>
+                    <p className="text-sm text-gray-500">Run a brand analysis scan to discover your competitors</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-6">
