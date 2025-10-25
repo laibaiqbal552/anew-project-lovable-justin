@@ -134,6 +134,8 @@ const SocialConnection = () => {
   const [profileFollowers, setProfileFollowers] = useState<Record<string, number | null>>({});
   const [isFetchingFollowers, setIsFetchingFollowers] = useState(false);
   const [totalFollowers, setTotalFollowers] = useState(0);
+  const [facebookAccessToken, setFacebookAccessToken] = useState<string | null>(null);
+  const [isFetchingFacebookData, setIsFetchingFacebookData] = useState(false);
 
   useEffect(() => {
     checkUserAndBusiness();
@@ -630,8 +632,91 @@ const SocialConnection = () => {
 
   const handleConnect = () => {
     localStorage.setItem("oauth_platform", "facebook");
-    const FB_AUTH_URL = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${FACEBOOK_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=public_profile`;
+    const FB_AUTH_URL = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${FACEBOOK_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=pages_read_engagement,pages_read_user_content,pages_manage_metadata,instagram_basic`;
     window.location.href = FB_AUTH_URL;
+  };
+
+  // Fetch comprehensive Facebook data including pages, insights, and Instagram connections
+  const fetchFacebookData = async (accessToken: string) => {
+    setIsFetchingFacebookData(true);
+
+    try {
+      console.log("🔵 Fetching comprehensive Facebook data...");
+      console.log("=".repeat(80));
+
+      // Get user info
+      const userResponse = await fetch(
+        `https://graph.facebook.com/v21.0/me?fields=id,name,email,picture.type(large)&access_token=${accessToken}`
+      );
+      const userData = await userResponse.json();
+      console.log("👤 User Info:", userData);
+
+      // Get all pages the user manages
+      const pagesResponse = await fetch(
+        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,picture,followers_count,fan_count,engagement,talking_about_count&access_token=${accessToken}`
+      );
+      const pagesData = await pagesResponse.json();
+      console.log("📄 All Pages:", pagesData);
+
+      // For each page, get detailed insights
+      if (pagesData.data && Array.isArray(pagesData.data)) {
+        console.log("=".repeat(80));
+        console.log(`📊 FACEBOOK PAGES DETAILS (${pagesData.data.length} page${pagesData.data.length !== 1 ? 's' : ''})`);
+        console.log("=".repeat(80));
+
+        for (const page of pagesData.data) {
+          const pageToken = page.access_token;
+          console.log(`\n📱 Page: ${page.name}`);
+          console.log(`   ID: ${page.id}`);
+          console.log(`   Followers: ${page.followers_count || page.fan_count || 0}`);
+          console.log(`   Talking About: ${page.talking_about_count || 0}`);
+          console.log(`   Engagement: ${page.engagement || 0}`);
+
+          // Get page insights
+          const insightsResponse = await fetch(
+            `https://graph.facebook.com/v21.0/${page.id}/insights?metric=page_views_total,page_fans,page_fan_adds_unique,page_engaged_users,page_post_engagements&access_token=${pageToken}`
+          );
+          const insightsData = await insightsResponse.json();
+          console.log(`   📈 Insights:`, insightsData);
+
+          // Get recent posts
+          const postsResponse = await fetch(
+            `https://graph.facebook.com/v21.0/${page.id}/posts?fields=id,message,story,created_time,permalink_url,likes.summary(true).limit(0),comments.summary(true).limit(0),shares&limit=5&access_token=${pageToken}`
+          );
+          const postsData = await postsResponse.json();
+          console.log(`   📝 Recent Posts (5):`, postsData);
+
+          // Get Instagram connected account if available
+          const igResponse = await fetch(
+            `https://graph.facebook.com/v21.0/${page.id}?fields=instagram_business_account&access_token=${pageToken}`
+          );
+          const igData = await igResponse.json();
+          if (igData.instagram_business_account) {
+            console.log(`   📸 Instagram Connected:`, igData.instagram_business_account);
+
+            // Get Instagram insights
+            const igInsightsResponse = await fetch(
+              `https://graph.facebook.com/v21.0/${igData.instagram_business_account.id}?fields=id,username,name,biography,profile_picture_url,followers_count,ig_mention_count&access_token=${pageToken}`
+            );
+            const igInsightsData = await igInsightsResponse.json();
+            console.log(`   📸 Instagram Details:`, igInsightsData);
+          }
+        }
+      }
+
+      console.log("=".repeat(80));
+      console.log("✅ Facebook data fetch completed");
+      console.log("=".repeat(80));
+
+      setFacebookAccessToken(accessToken);
+      toast.success("Facebook data fetched successfully! Check console for details.");
+
+    } catch (error) {
+      console.error("❌ Error fetching Facebook data:", error);
+      toast.error("Failed to fetch Facebook data. Please check console for details.");
+    } finally {
+      setIsFetchingFacebookData(false);
+    }
   };
 
   const exchangeCode = async () => {
@@ -663,6 +748,9 @@ const SocialConnection = () => {
         console.log("Facebook User:", userData);
 
         await saveToDatabase(userData, tokens.access_token, "facebook");
+
+        // Fetch comprehensive Facebook data
+        await fetchFacebookData(tokens.access_token);
       }
     } catch (err) {
       console.error("Error connecting Facebook:", err);
