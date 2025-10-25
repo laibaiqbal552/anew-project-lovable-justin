@@ -495,10 +495,9 @@ const SocialConnection = () => {
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
-            business_url: siteUrl || localStorage.getItem("businessWebsiteUrl"),
-            business_name: bizName || localStorage.getItem("businessName"),
-            social_profiles: supportedProfiles,
-            fetch_followers_only: true, // Flag to indicate we only need followers
+            businessName: bizName || localStorage.getItem("businessName"),
+            websiteUrl: siteUrl || localStorage.getItem("businessWebsiteUrl"),
+            socialProfiles: supportedProfiles,
           }),
         }
       );
