@@ -664,31 +664,14 @@ export class SocialMediaDetector {
   }
 
   private async enhanceProfiles(profiles: SocialMediaProfile[]): Promise<SocialMediaProfile[]> {
-    // Fetch real follower counts and engagement data for each profile
-    return Promise.all(profiles.map(async (profile) => {
-      try {
-        const enhancedProfile = { ...profile };
-
-        // Only fetch real data if we don't already have it from earlier enhancement
-        if (!enhancedProfile.followers) {
-          const realData = await this.fetchRealFollowerCount(profile.platform, profile.url);
-
-          if (realData && realData.followers > 0) {
-            enhancedProfile.followers = realData.followers;
-            enhancedProfile.engagement = realData.engagement;
-            enhancedProfile.verified = realData.verified;
-            enhancedProfile.completeness = enhancedProfile.completeness || 90;
-          } else {
-            // Keep as undefined if we can't fetch real data
-            enhancedProfile.completeness = enhancedProfile.completeness || 70;
-          }
-        }
-
-        return enhancedProfile;
-      } catch (error) {
-        console.warn(`Failed to enhance profile ${profile.url}:`, error);
-        return profile;
-      }
+    // Return profiles without attempting to fetch follower counts
+    // This avoids CORS errors and unnecessary API calls
+    return profiles.map((profile) => ({
+      ...profile,
+      followers: undefined,
+      engagement: undefined,
+      verified: false,
+      completeness: 70
     }));
   }
 
@@ -801,36 +784,14 @@ export class SocialMediaDetector {
   }
 
   private async enhanceFoundSocialProfiles(profiles: SocialMediaProfile[]): Promise<SocialMediaProfile[]> {
-    // For each found profile, try to get REAL follower counts ONLY
-    return Promise.all(profiles.map(async (profile) => {
-      try {
-        const enhancedProfile = { ...profile };
-
-        // Fetch REAL follower counts from each platform
-        const realData = await this.fetchRealFollowerCount(profile.platform, profile.url);
-
-        if (realData && realData.followers > 0) {
-          // Only use real data if we successfully fetched it
-          enhancedProfile.followers = realData.followers;
-          enhancedProfile.engagement = realData.engagement;
-          enhancedProfile.verified = realData.verified;
-          enhancedProfile.completeness = 90;
-        } else {
-          // DO NOT use mock data - leave as undefined to show "unavailable"
-          enhancedProfile.followers = undefined;
-          enhancedProfile.engagement = undefined;
-          enhancedProfile.verified = false;
-          enhancedProfile.completeness = 70;
-        }
-
-        return enhancedProfile;
-      } catch (error) {
-        console.warn(`Failed to enhance profile ${profile.url}:`, error);
-        // Return profile without follower data if enhancement fails
-        profile.followers = undefined;
-        profile.engagement = undefined;
-        return profile;
-      }
+    // Return profiles without attempting to fetch follower counts
+    // This avoids CORS errors and unnecessary API calls
+    return profiles.map((profile) => ({
+      ...profile,
+      followers: undefined,
+      engagement: undefined,
+      verified: false,
+      completeness: 70
     }));
   }
 

@@ -131,9 +131,6 @@ const SocialConnection = () => {
   const [siteUrl, setSiteUrl] = useState<string>("");
   const [bizName, setBizName] = useState<string>("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [profileFollowers, setProfileFollowers] = useState<Record<string, number | null>>({});
-  const [isFetchingFollowers, setIsFetchingFollowers] = useState(false);
-  const [totalFollowers, setTotalFollowers] = useState(0);
   const [facebookAccessToken, setFacebookAccessToken] = useState<string | null>(null);
   const [isFetchingFacebookData, setIsFetchingFacebookData] = useState(false);
 
@@ -337,9 +334,6 @@ const SocialConnection = () => {
 
         // Auto-save detected profiles to the database for analysis
         await saveDetectedProfiles(socialMediaData.platforms);
-
-        // Fetch followers for detected social media profiles
-        await fetchFollowersForProfiles(socialMediaData.platforms);
       } else {
         toast.info(
           "No social media profiles detected. You can add them manually."
@@ -461,134 +455,6 @@ const SocialConnection = () => {
     }
   };
 
-  // Fetch followers for detected social media profiles using SerpAPI
-  const fetchFollowersForProfiles = async (
-    profiles: { platform: string; url: string }[]
-  ) => {
-    if (!Array.isArray(profiles) || profiles.length === 0) return;
-
-    setIsFetchingFollowers(true);
-    const followerMap: Record<string, number | null> = {};
-    let total = 0;
-
-    try {
-      // Filter for Instagram and Facebook only (platforms supported by SerpAPI)
-      const supportedProfiles = profiles.filter(
-        (p) =>
-          p.platform?.toLowerCase().includes("instagram") ||
-          p.platform?.toLowerCase().includes("facebook")
-      );
-
-      if (supportedProfiles.length === 0) {
-        console.log("No Instagram or Facebook profiles to fetch followers for");
-        setIsFetchingFollowers(false);
-        return;
-      }
-
-      console.log("🔍 Fetching followers for profiles:", supportedProfiles);
-
-      // Call the comprehensive-brand-analysis function which now has integrated SerpAPI
-      const analysisResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/comprehensive-brand-analysis`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            businessName: bizName || localStorage.getItem("businessName"),
-            websiteUrl: siteUrl || localStorage.getItem("businessWebsiteUrl"),
-            socialProfiles: supportedProfiles,
-          }),
-        }
-      );
-
-      if (!analysisResponse.ok) {
-        console.warn(
-          "❌ Failed to fetch followers from comprehensive analysis:",
-          analysisResponse.status
-        );
-        setIsFetchingFollowers(false);
-        return;
-      }
-
-      const analysisData = await analysisResponse.json();
-      console.log("📊 Analysis response received:", analysisData);
-
-      // Extract follower data from the response
-      if (
-        analysisData.success &&
-        analysisData.data?.socialMedia?.detected_platforms
-      ) {
-        const detectedPlatforms = analysisData.data.socialMedia.detected_platforms;
-
-        console.log("=".repeat(60));
-        console.log("🎯 SOCIAL MEDIA FOLLOWERS COUNT - STEP 2");
-        console.log("=".repeat(60));
-
-        detectedPlatforms.forEach((profile: any) => {
-          const key = `${profile.platform}-${profile.url}`;
-          const followers = profile.followers || null;
-          followerMap[key] = followers;
-
-          if (followers && followers > 0) {
-            total += followers;
-          }
-
-          console.log(
-            `📱 ${profile.platform.toUpperCase()}: ${followers ? followers.toLocaleString() : "N/A"} followers`
-          );
-          console.log(`   URL: ${profile.url}`);
-          if (profile.username) console.log(`   Username: @${profile.username}`);
-          console.log(`   Source: ${profile.source || "unknown"}`);
-          console.log("---");
-        });
-
-        console.log("=".repeat(60));
-        console.log(`📈 TOTAL FOLLOWERS: ${total.toLocaleString()}`);
-        console.log(`✅ Processed ${detectedPlatforms.length} platform(s)`);
-        console.log("=".repeat(60));
-      }
-
-      setProfileFollowers(followerMap);
-      setTotalFollowers(total);
-
-      // Update the detected social data with followers
-      if (detectedSocialData) {
-        const updatedPlatforms = detectedSocialData.platforms.map((p) => {
-          const key = `${p.platform}-${p.url}`;
-          return {
-            ...p,
-            followers: followerMap[key] || p.followers,
-          };
-        });
-
-        setDetectedSocialData({
-          ...detectedSocialData,
-          platforms: updatedPlatforms,
-        });
-
-        // Update localStorage cache as well
-        localStorage.setItem(
-          "detectedSocialMedia",
-          JSON.stringify({
-            ...detectedSocialData,
-            platforms: updatedPlatforms,
-          })
-        );
-      }
-
-      console.log("✨ Followers updated successfully", {
-        followerMap,
-        total,
-      });
-    } catch (error) {
-      console.error("Error fetching followers for profiles:", error);
-    } finally {
-      setIsFetchingFollowers(false);
-    }
-  };
 
   const handleOAuthConnect = async (platform: string) => {
     // This would initiate OAuth flow for each platform
@@ -1218,34 +1084,6 @@ const SocialConnection = () => {
                                               : profile.url}
                                             <ExternalLink className="h-3 w-3" />
                                           </a>
-                                          <div className="flex flex-col gap-1">
-                                            {profile.followers !== undefined &&
-                                            profile.followers > 0 ? (
-                                              <span className="flex items-center gap-1 font-semibold text-brand-600 text-sm">
-                                                <Users className="h-4 w-4" />
-                                                {profile.followers.toLocaleString()}{" "}
-                                                {profile.platform === "youtube"
-                                                  ? "subscribers"
-                                                  : "followers"}
-                                              </span>
-                                            ) : (
-                                              <span className="flex items-center gap-1 text-gray-500 text-xs">
-                                                <Users className="h-3 w-3" />
-                                                Connect account to see follower
-                                                count
-                                              </span>
-                                            )}
-                                            {profile.engagement !== undefined &&
-                                              profile.engagement > 0 && (
-                                                <span className="flex items-center gap-1 text-xs text-gray-600">
-                                                  <Eye className="h-3 w-3" />
-                                                  {profile.engagement.toFixed(
-                                                    1
-                                                  )}
-                                                  % engagement
-                                                </span>
-                                              )}
-                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -1262,48 +1100,6 @@ const SocialConnection = () => {
                             )
                           )}
 
-                          {/* Followers Summary Card */}
-                          {!isFetchingFollowers && totalFollowers > 0 && (
-                            <Card className="bg-gradient-to-r from-brand-50 to-blue-50 border-brand-200 mt-6">
-                              <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 bg-brand-600 rounded-lg flex items-center justify-center text-white">
-                                      <Users className="h-7 w-7" />
-                                    </div>
-                                    <div>
-                                      <p className="text-sm text-gray-600 font-medium">
-                                        Total Followers Across Detected Profiles
-                                      </p>
-                                      <p className="text-3xl font-bold text-brand-600">
-                                        {totalFollowers.toLocaleString()}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-green-100 text-green-700 text-sm"
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Complete
-                                  </Badge>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-
-                          {isFetchingFollowers && (
-                            <Card className="bg-blue-50 border-blue-200 mt-6">
-                              <CardContent className="p-6">
-                                <div className="flex items-center justify-center gap-3">
-                                  <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                                  <p className="text-blue-600 font-medium">
-                                    Fetching follower counts...
-                                  </p>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
                         </div>
                       ) : (
                         <>

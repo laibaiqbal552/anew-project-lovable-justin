@@ -40,6 +40,39 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Auto-format phone number to (XXX) XXX-XXXX format
+const formatPhoneNumber = (value: string): string => {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+};
+
+// Auto-format website URL
+const formatWebsiteUrl = (value: string): string => {
+  value = value.trim();
+  if (!value) return '';
+
+  // Remove all protocols first (http:// or https://)
+  let url = value.replace(/^(https?:\/\/)/, '');
+
+  // Remove trailing slash
+  url = url.replace(/\/$/, '');
+
+  // If URL is empty after removing protocol, return empty
+  if (!url) return '';
+
+  // Add https:// if no protocol exists
+  if (!value.startsWith('http://') && !value.startsWith('https://')) {
+    url = 'https://' + url;
+  } else {
+    // If original value had protocol, preserve it
+    url = value.replace(/\/$/, '');
+  }
+
+  return url;
+};
+
 const scanSchema = z.object({
   // Account Info
   fullName: z.string().min(2, "Please enter your full name"),
@@ -51,10 +84,14 @@ const scanSchema = z.object({
     .min(2, "Business name must be at least 2 characters"),
   websiteUrl: z
     .string()
-    .url("Please enter a valid URL (including http:// or https://)"),
+    .min(1, "Website URL is required")
+    .url("Please enter a valid URL (including http:// or https://)")
+    .transform(formatWebsiteUrl),
   industry: z.string().min(1, "Please select an industry"),
   address: z.string().min(5, "Please enter a complete address"),
-  phone: z.string().min(10, "Please enter a valid phone number"),
+  phone: z.string()
+    .min(10, "Please enter a valid phone number")
+    .transform(formatPhoneNumber),
   description: z
     .string()
     .min(10, "Please provide a brief description of your business"),
@@ -769,8 +806,13 @@ const StartScan = () => {
                       </Label>
                       <Input
                         id="websiteUrl"
-                        {...form.register("websiteUrl")}
-                        placeholder="https://yourbusiness.com"
+                        {...form.register("websiteUrl", {
+                          onChange: (e) => {
+                            const formatted = formatWebsiteUrl(e.target.value);
+                            form.setValue("websiteUrl", formatted);
+                          }
+                        })}
+                        placeholder="yourbusiness.com or https://yourbusiness.com"
                         disabled={isLoading}
                       />
                       {form.formState.errors.websiteUrl && (
@@ -817,9 +859,15 @@ const StartScan = () => {
                       </Label>
                       <Input
                         id="phone"
-                        {...form.register("phone")}
-                        placeholder="+1 (555) 123-4567"
+                        {...form.register("phone", {
+                          onChange: (e) => {
+                            const formatted = formatPhoneNumber(e.target.value);
+                            form.setValue("phone", formatted);
+                          }
+                        })}
+                        placeholder="(555) 123-4567"
                         disabled={isLoading}
+                        maxLength={14}
                       />
                       {form.formState.errors.phone && (
                         <p className="text-sm text-destructive">
