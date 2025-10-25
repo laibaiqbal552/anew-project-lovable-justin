@@ -131,6 +131,9 @@ const SocialConnection = () => {
   const [siteUrl, setSiteUrl] = useState<string>("");
   const [bizName, setBizName] = useState<string>("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [profileFollowers, setProfileFollowers] = useState<Record<string, number | null>>({});
+  const [isFetchingFollowers, setIsFetchingFollowers] = useState(false);
+  const [totalFollowers, setTotalFollowers] = useState(0);
 
   useEffect(() => {
     checkUserAndBusiness();
@@ -332,6 +335,9 @@ const SocialConnection = () => {
 
         // Auto-save detected profiles to the database for analysis
         await saveDetectedProfiles(socialMediaData.platforms);
+
+        // Fetch followers for detected social media profiles
+        await fetchFollowersForProfiles(socialMediaData.platforms);
       } else {
         toast.info(
           "No social media profiles detected. You can add them manually."
@@ -450,6 +456,122 @@ const SocialConnection = () => {
       await loadExistingSocialAccounts(businessId);
     } catch (e) {
       console.error("Failed to save detected profiles:", e);
+    }
+  };
+
+  // Fetch followers for detected social media profiles using SerpAPI
+  const fetchFollowersForProfiles = async (
+    profiles: { platform: string; url: string }[]
+  ) => {
+    if (!Array.isArray(profiles) || profiles.length === 0) return;
+
+    setIsFetchingFollowers(true);
+    const followerMap: Record<string, number | null> = {};
+    let total = 0;
+
+    try {
+      // Filter for Instagram and Facebook only (platforms supported by SerpAPI)
+      const supportedProfiles = profiles.filter(
+        (p) =>
+          p.platform?.toLowerCase().includes("instagram") ||
+          p.platform?.toLowerCase().includes("facebook")
+      );
+
+      if (supportedProfiles.length === 0) {
+        console.log("No Instagram or Facebook profiles to fetch followers for");
+        setIsFetchingFollowers(false);
+        return;
+      }
+
+      console.log("Fetching followers for profiles:", supportedProfiles);
+
+      // Call the comprehensive-brand-analysis function which now has integrated SerpAPI
+      const analysisResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/comprehensive-brand-analysis`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            business_url: siteUrl || localStorage.getItem("businessWebsiteUrl"),
+            business_name: bizName || localStorage.getItem("businessName"),
+            social_profiles: supportedProfiles,
+            fetch_followers_only: true, // Flag to indicate we only need followers
+          }),
+        }
+      );
+
+      if (!analysisResponse.ok) {
+        console.warn(
+          "Failed to fetch followers from comprehensive analysis:",
+          analysisResponse.status
+        );
+        setIsFetchingFollowers(false);
+        return;
+      }
+
+      const analysisData = await analysisResponse.json();
+
+      // Extract follower data from the response
+      if (
+        analysisData.success &&
+        analysisData.data?.socialMedia?.detected_platforms
+      ) {
+        const detectedPlatforms = analysisData.data.socialMedia.detected_platforms;
+
+        detectedPlatforms.forEach((profile: any) => {
+          const key = `${profile.platform}-${profile.url}`;
+          const followers = profile.followers || null;
+          followerMap[key] = followers;
+
+          if (followers && followers > 0) {
+            total += followers;
+          }
+
+          console.log(
+            `Followers for ${profile.platform}: ${followers || "N/A"}`
+          );
+        });
+      }
+
+      setProfileFollowers(followerMap);
+      setTotalFollowers(total);
+
+      // Update the detected social data with followers
+      if (detectedSocialData) {
+        const updatedPlatforms = detectedSocialData.platforms.map((p) => {
+          const key = `${p.platform}-${p.url}`;
+          return {
+            ...p,
+            followers: followerMap[key] || p.followers,
+          };
+        });
+
+        setDetectedSocialData({
+          ...detectedSocialData,
+          platforms: updatedPlatforms,
+        });
+
+        // Update localStorage cache as well
+        localStorage.setItem(
+          "detectedSocialMedia",
+          JSON.stringify({
+            ...detectedSocialData,
+            platforms: updatedPlatforms,
+          })
+        );
+      }
+
+      console.log("Followers updated successfully", {
+        followerMap,
+        total,
+      });
+    } catch (error) {
+      console.error("Error fetching followers for profiles:", error);
+    } finally {
+      setIsFetchingFollowers(false);
     }
   };
 
@@ -1037,6 +1159,49 @@ const SocialConnection = () => {
                                 </CardContent>
                               </Card>
                             )
+                          )}
+
+                          {/* Followers Summary Card */}
+                          {!isFetchingFollowers && totalFollowers > 0 && (
+                            <Card className="bg-gradient-to-r from-brand-50 to-blue-50 border-brand-200 mt-6">
+                              <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 bg-brand-600 rounded-lg flex items-center justify-center text-white">
+                                      <Users className="h-7 w-7" />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-gray-600 font-medium">
+                                        Total Followers Across Detected Profiles
+                                      </p>
+                                      <p className="text-3xl font-bold text-brand-600">
+                                        {totalFollowers.toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-green-100 text-green-700 text-sm"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Complete
+                                  </Badge>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
+
+                          {isFetchingFollowers && (
+                            <Card className="bg-blue-50 border-blue-200 mt-6">
+                              <CardContent className="p-6">
+                                <div className="flex items-center justify-center gap-3">
+                                  <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                                  <p className="text-blue-600 font-medium">
+                                    Fetching follower counts...
+                                  </p>
+                                </div>
+                              </CardContent>
+                            </Card>
                           )}
                         </div>
                       ) : (
