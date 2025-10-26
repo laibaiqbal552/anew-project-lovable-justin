@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLoadScript, StandaloneSearchBox } from "@react-google-maps/api";
+
+// Google Maps libraries - must be defined outside component to avoid performance warning
+const GOOGLE_MAPS_LIBRARIES = ["places"] as const;
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -108,7 +111,7 @@ const StartScan = () => {
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: googleMapsApiKey || "",
-    libraries: ["places"],
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   // Check if user is already logged in AND if returning from social media

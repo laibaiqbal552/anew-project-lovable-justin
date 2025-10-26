@@ -18,7 +18,12 @@
       "Bash(findstr:*)",
       "Bash(npx supabase:*)",
       "Read(//c/Users/Microsoft/**)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(node test-google-maps.js:*)",
+      "Bash(node test-full-flow.js:*)",
+      "Bash(cat:*)",
+      "Bash(node test-edge-function-direct.js:*)",
+      "Bash(node test-geocoding-direct.js:*)"
     ],
     "deny": [],
     "ask": []

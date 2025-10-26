@@ -31,10 +31,16 @@ interface BrandAnalysisResult {
 function sanitizeAddress(address: string): string {
   if (!address) return address
 
-  // Replace Arabic comma (،) with regular comma
-  let cleaned = address.replace(/،/g, ',')
+  let cleaned = address
 
-  // Remove extra spaces
+  // Remove Arabic/Urdu/Persian characters (non-Latin scripts)
+  // This regex removes characters from Arabic, Persian, Urdu blocks
+  cleaned = cleaned.replace(/[\u0600-\u06FF]/g, '')
+
+  // Replace Arabic comma (،) with regular comma (already covered above but keeping for safety)
+  cleaned = cleaned.replace(/،/g, ',')
+
+  // Remove extra spaces (including multiple spaces)
   cleaned = cleaned.replace(/\s+/g, ' ').trim()
 
   // Remove leading/trailing commas and spaces
@@ -45,6 +51,9 @@ function sanitizeAddress(address: string): string {
 
   // Remove space before comma
   cleaned = cleaned.replace(/\s+,/g, ',')
+
+  // Remove trailing comma if present
+  cleaned = cleaned.replace(/,\s*$/, '').trim()
 
   console.log(`🧹 Address sanitization:`)
   console.log(`   Before: "${address}"`)
@@ -310,7 +319,11 @@ async function fetchCompetitors(
     }
 
     const searchResult = await searchResponse.json()
-    console.log(`✅ Competitor search response:`, JSON.stringify(searchResult).substring(0, 200))
+    console.log(`✅ Competitor search response:`, JSON.stringify(searchResult).substring(0, 500))
+    console.log(`   Response.success: ${searchResult.success}`)
+    console.log(`   Response.competitors length: ${searchResult.competitors?.length || 'undefined'}`)
+    console.log(`   Response.error: ${searchResult.error || 'none'}`)
+    console.log(`   FULL RESPONSE:`, JSON.stringify(searchResult, null, 2))
 
     if (!searchResult.success) {
       console.warn('❌ Competitor search not successful:', searchResult.error)
@@ -323,6 +336,8 @@ async function fetchCompetitors(
 
     if (!searchResult.competitors || searchResult.competitors.length === 0) {
       console.warn('⚠️ No competitors found in results')
+      console.warn(`   Total competitors in response: ${searchResult.competitors?.length || 0}`)
+      console.warn(`   Searched business: ${JSON.stringify(searchResult.searchedBusiness)}`)
       return {
         competitors: [],
         searchedBusiness: searchResult.searchedBusiness,

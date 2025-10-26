@@ -50,7 +50,15 @@ serve(async (req) => {
   try {
     const { businessName, address, industry, radius = 5000, limit = 15 } = await req.json()
 
+    console.log(`📥 FETCH-COMPETITOR-SEARCH CALLED`)
+    console.log(`   businessName: "${businessName}"`)
+    console.log(`   address: "${address}"`)
+    console.log(`   industry: "${industry}"`)
+    console.log(`   radius: ${radius}`)
+    console.log(`   limit: ${limit}`)
+
     if (!businessName || !address) {
+      console.error(`❌ MISSING REQUIRED PARAMS: businessName="${businessName}", address="${address}"`)
       return new Response(
         JSON.stringify({
           success: false,
@@ -61,8 +69,14 @@ serve(async (req) => {
     }
 
     const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY')
+    console.log(`   API Key available: ${googleMapsApiKey ? '✅ YES' : '❌ NO'}`)
+    if (googleMapsApiKey) {
+      console.log(`   API Key (first 30 chars): ${googleMapsApiKey.substring(0, 30)}...`)
+      console.log(`   API Key length: ${googleMapsApiKey.length}`)
+    }
 
     if (!googleMapsApiKey) {
+      console.error(`❌ GOOGLE_MAPS_API_KEY not configured in Supabase secrets`)
       return new Response(
         JSON.stringify({
           success: true,
@@ -112,9 +126,12 @@ serve(async (req) => {
 
     // Step 2: Search for nearby businesses (competitors) using Nearby Search
     // Use industry keyword if available for more targeted results
-    const searchKeyword = industry ? `${industry} ${businessName}` : businessName
+    const searchKeyword = industry ? `${industry}` : businessName
     console.log(`🔍 Searching for: "${searchKeyword}" at coordinates ${lat}, ${lng} with radius ${radius}m`)
+    console.log(`🔍 Full Search params: industry=${industry}, businessName=${businessName}, keyword="${searchKeyword}"`)
+
     const nearbySearchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&keyword=${encodeURIComponent(searchKeyword)}&key=${googleMapsApiKey}`
+    console.log(`🌐 Nearby Search URL: ${nearbySearchUrl.substring(0, 150)}...`)
 
     const nearbyResponse = await fetch(nearbySearchUrl, {
       signal: AbortSignal.timeout(8000)
@@ -123,8 +140,12 @@ serve(async (req) => {
     const nearbyData: GooglePlacesSearchResult = await nearbyResponse.json()
 
     console.log(`📡 Nearby search response status: ${nearbyData.status}`)
+    console.log(`📡 Nearby search response - full status: ${JSON.stringify(nearbyData).substring(0, 300)}`)
     if (nearbyData.results) {
       console.log(`📊 Found ${nearbyData.results.length} results from Nearby Search`)
+    }
+    if (nearbyData.error_message) {
+      console.error(`📊 Error message: ${nearbyData.error_message}`)
     }
 
     if (nearbyData.status !== 'OK') {
@@ -147,14 +168,19 @@ serve(async (req) => {
       nearbyData.results.slice(0, 3).forEach((place, idx) => {
         console.log(`   ${idx + 1}. ${place.name} - Rating: ${place.rating}, Reviews: ${place.user_ratings_total}`)
       })
+    } else {
+      console.error(`❌ CRITICAL: Nearby Search returned 0 results!`)
+      console.error(`   Geocoded address: ${geocodeData.results[0].formatted_address}`)
+      console.error(`   Search coordinates: ${lat}, ${lng}`)
+      console.error(`   Search radius: ${radius}m`)
+      console.error(`   Search keyword: "${searchKeyword}"`)
+      console.error(`   Industry: "${industry}", Business name: "${businessName}"`)
     }
 
-    // Step 3: Filter and format competitors (exclude the original business)
+    // Step 3: Format competitors (take top N results)
+    // Note: We don't filter by exact business name since Google's Nearby Search
+    // already returns businesses by keyword/type. The user can see all results.
     const competitors: Competitor[] = nearbyData.results
-      .filter((place) => {
-        // Exclude exact business name match (original business)
-        return place.name.toLowerCase() !== businessName.toLowerCase()
-      })
       .slice(0, limit)
       .map((place) => ({
         name: place.name,
@@ -167,14 +193,16 @@ serve(async (req) => {
         businessType: place.types?.[0]?.replace(/_/g, ' '),
       }))
 
-    console.log(`✅ Filtered to ${competitors.length} competitors (after excluding original business)`)
+    console.log(`✅ Formatted ${competitors.length} competitors from ${nearbyData.results.length} total results`)
     if (competitors.length > 0) {
       console.log(`🏆 Top competitor: ${competitors[0].name} (${competitors[0].reviewCount} reviews, rating: ${competitors[0].rating})`)
     } else {
       console.log(`⚠️ No competitors found after filtering`)
       console.log(`   Total results: ${nearbyData.results.length}`)
       console.log(`   Business name to filter: "${businessName}"`)
-      console.log(`   First result: "${nearbyData.results[0]?.name || 'N/A'}"`)
+      if (nearbyData.results.length > 0) {
+        console.log(`   First result: "${nearbyData.results[0]?.name || 'N/A'}"`)
+      }
     }
 
     return new Response(
