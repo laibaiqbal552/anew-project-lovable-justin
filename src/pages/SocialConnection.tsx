@@ -274,6 +274,53 @@ const SocialConnection = () => {
     }
   };
 
+  // Fetch Twitter followers for detected Twitter profiles
+  const enrichTwitterFollowers = async (platforms: any[]) => {
+    const enrichedPlatforms = [...platforms];
+
+    for (let i = 0; i < enrichedPlatforms.length; i++) {
+      const platform = enrichedPlatforms[i];
+
+      // Check if this is a Twitter/X profile
+      if (platform.platform?.toLowerCase() === 'twitter' || platform.platform?.toLowerCase() === 'x') {
+        try {
+          // Extract username from URL
+          let username = platform.username;
+
+          if (!username && platform.url) {
+            // Try to extract from URL: https://twitter.com/username
+            const match = platform.url.match(/(?:twitter\.com|x\.com)\/(@?([^/?]+))/);
+            username = match ? match[2] : null;
+          }
+
+          if (!username) continue;
+
+          console.log(`📱 Fetching Twitter followers for @${username}`);
+
+          // Call the fetch-twitter-followers edge function
+          const response = await supabase.functions.invoke('fetch-twitter-followers', {
+            body: { username },
+          });
+
+          if (response.data?.success && response.data?.followers_count) {
+            console.log(`✅ Twitter followers for @${username}: ${response.data.followers_count}`);
+            enrichedPlatforms[i] = {
+              ...platform,
+              followers: response.data.followers_count,
+            };
+          } else if (response.error) {
+            console.error(`❌ Error fetching Twitter followers: ${response.error.message}`);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch Twitter followers for ${platform.platform}:`, error);
+          // Continue with other platforms even if one fails
+        }
+      }
+    }
+
+    return enrichedPlatforms;
+  };
+
   const runSocialMediaDetection = async (overrideUrl?: string) => {
     if (hasRunDetection && !overrideUrl) return;
 
@@ -309,31 +356,40 @@ const SocialConnection = () => {
         businessName
       );
 
-      setDetectedSocialData(socialMediaData);
+      // Enrich detected platforms with Twitter followers
+      let enrichedData = { ...socialMediaData };
+      if (socialMediaData.platforms.length > 0) {
+        const enrichedPlatforms = await enrichTwitterFollowers(
+          socialMediaData.platforms
+        );
+        enrichedData = { ...socialMediaData, platforms: enrichedPlatforms };
+      }
+
+      setDetectedSocialData(enrichedData);
 
       // CRITICAL FIX: Store the business ID with the cached detection data
       localStorage.setItem(
         "detectedSocialMedia",
-        JSON.stringify(socialMediaData)
+        JSON.stringify(enrichedData)
       );
       localStorage.setItem("detectedSocialMediaBusinessId", businessId || "");
 
-      console.log("Social media detection completed:", socialMediaData);
+      console.log("Social media detection completed:", enrichedData);
 
-      if (socialMediaData.platforms.length > 0) {
+      if (enrichedData.platforms.length > 0) {
         toast.success(
-          `Found ${socialMediaData.platforms.length} social media profiles!`
+          `Found ${enrichedData.platforms.length} social media profiles!`
         );
 
         // Prefill the manual URLs with detected profiles
         const urlMap: Record<string, string> = {};
-        socialMediaData.platforms.forEach((profile) => {
+        enrichedData.platforms.forEach((profile) => {
           urlMap[profile.platform] = profile.url;
         });
         setSocialUrls((prev) => ({ ...prev, ...urlMap }));
 
         // Auto-save detected profiles to the database for analysis
-        await saveDetectedProfiles(socialMediaData.platforms);
+        await saveDetectedProfiles(enrichedData.platforms);
       } else {
         toast.info(
           "No social media profiles detected. You can add them manually."
@@ -498,7 +554,10 @@ const SocialConnection = () => {
 
   const handleConnect = () => {
     localStorage.setItem("oauth_platform", "facebook");
-    const FB_AUTH_URL = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${FACEBOOK_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=pages_read_engagement,pages_read_user_content,pages_manage_metadata,instagram_basic`;
+    // Using valid Facebook scopes - simplified for development
+    // Valid scopes: email, public_profile, pages_read_engagement, pages_read_user_content
+    const FB_AUTH_URL = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${FACEBOOK_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=email,public_profile,pages_read_engagement,pages_read_user_content&response_type=code`;
+    console.log("🔵 Redirecting to Facebook OAuth:", FB_AUTH_URL);
     window.location.href = FB_AUTH_URL;
   };
 
