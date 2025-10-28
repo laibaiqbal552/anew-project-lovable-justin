@@ -1687,16 +1687,47 @@ const Dashboard = () => {
                   {/* Display social profiles with follower counts */}
                   {report.analysis_data?.social?.detected_platforms && report.analysis_data.social.detected_platforms.length > 0 ? (
                     <div className="space-y-2">
-                      {report.analysis_data.social.detected_platforms.map((platform: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-700 capitalize">{platform.platform}</span>
+                      {report.analysis_data.social.detected_platforms.map((platform: any, idx: number) => {
+                        // Get platform color and icon based on platform name
+                        const platformConfig: Record<string, { color: string; bgColor: string }> = {
+                          'twitter': { color: '#1DA1F2', bgColor: 'bg-blue-50' },
+                          'x': { color: '#000000', bgColor: 'bg-gray-50' },
+                          'facebook': { color: '#1877F2', bgColor: 'bg-blue-50' },
+                          'instagram': { color: '#E4405F', bgColor: 'bg-pink-50' },
+                          'youtube': { color: '#FF0000', bgColor: 'bg-red-50' },
+                          'tiktok': { color: '#000000', bgColor: 'bg-gray-50' },
+                          'linkedin': { color: '#0A66C2', bgColor: 'bg-blue-50' }
+                        };
+
+                        const config = platformConfig[platform.platform?.toLowerCase()] || { color: '#666', bgColor: 'bg-gray-50' };
+
+                        return (
+                          <div key={idx} className={`flex justify-between items-center p-3 ${config.bgColor} rounded-lg border border-gray-200`}>
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                                style={{ backgroundColor: config.color }}
+                              >
+                                {platform.platform?.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-semibold text-gray-800 capitalize">{platform.platform}</span>
+                                <span className="text-xs text-gray-500">
+                                  {platform.followers ? `${platform.followers.toLocaleString()} followers` : 'No data'}
+                                </span>
+                              </div>
+                            </div>
+                            {platform.source && (
+                              <Badge variant="outline" className="text-xs">
+                                {platform.source === 'twitter-api' && '🐦'}
+                                {platform.source === 'youtube-api' && '📺'}
+                                {platform.source === 'scrapapi' && '🔍'}
+                                {platform.source && !['twitter-api', 'youtube-api', 'scrapapi'].includes(platform.source) && '✓'}
+                              </Badge>
+                            )}
                           </div>
-                          <span className="font-semibold text-gray-900">
-                            {platform.followers ? platform.followers.toLocaleString() : '—'}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-sm text-gray-500">No social media profiles detected</div>

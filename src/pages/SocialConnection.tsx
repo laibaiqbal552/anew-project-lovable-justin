@@ -274,50 +274,527 @@ const SocialConnection = () => {
     }
   };
 
-  // Fetch Twitter followers for detected Twitter profiles
-  const enrichTwitterFollowers = async (platforms: any[]) => {
+  // Fetch Twitter followers using Supabase edge function (server-side to avoid CORS)
+  const fetchTwitterFollowersDirectly = async (username: string): Promise<number | null> => {
+    try {
+      console.log(`📱 Fetching Twitter followers for @${username} via edge function...`);
+
+      const response = await supabase.functions.invoke('fetch-twitter-followers', {
+        body: { username },
+      });
+
+      console.log(`📊 Edge function response:`, response);
+
+      if (response.error) {
+        console.error(`❌ Edge function error:`, response.error);
+        return null;
+      }
+
+      // Check if response.data has followers_count
+      if (response.data) {
+        console.log(`📄 Response data:`, JSON.stringify(response.data));
+
+        const followersCount = response.data.followers_count;
+
+        if (followersCount && followersCount > 0) {
+          console.log(`✅ Twitter followers for @${username}: ${followersCount}`);
+          return followersCount;
+        } else {
+          console.warn(`⚠️ No followers count in response for @${username}, data:`, response.data);
+        }
+      } else {
+        console.warn(`⚠️ No data in response for @${username}`, response);
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`❌ Failed to fetch Twitter followers:`, error);
+      return null;
+    }
+  };
+
+  // Fetch LinkedIn followers by scraping the profile page
+  const fetchLinkedInFollowers = async (usernameOrUrl: string): Promise<number | null> => {
+    try {
+      // Determine if input is a full URL or just username
+      let linkedInUrl: string;
+
+      if (usernameOrUrl.startsWith('http://') || usernameOrUrl.startsWith('https://')) {
+        // It's already a full URL, use it as-is
+        linkedInUrl = usernameOrUrl;
+      } else {
+        // It's just a username, build the URL
+        const cleanUsername = usernameOrUrl.toLowerCase().trim();
+        linkedInUrl = cleanUsername.includes('company/')
+          ? `https://www.linkedin.com/company/${cleanUsername.replace('company/', '')}`
+          : `https://www.linkedin.com/in/${cleanUsername}`;
+      }
+
+      console.log(`💼 Fetching LinkedIn followers from: ${linkedInUrl}`);
+      console.log(`🔗 LinkedIn URL:`, linkedInUrl);
+
+      // Try to fetch LinkedIn profile
+      let htmlContent = '';
+
+      // Method 1: Try direct fetch
+      try {
+        console.log(`📡 Attempting direct fetch...`);
+        const directResponse = await fetch(linkedInUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        if (directResponse.ok) {
+          htmlContent = await directResponse.text();
+          console.log(`✅ Direct fetch succeeded`);
+        }
+      } catch (directError) {
+        console.log(`⚠️ Direct fetch failed, trying CORS proxies...`);
+
+        // Method 2: Try multiple CORS proxy services
+        const corsProxies = [
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(linkedInUrl)}`,
+          `https://cors-anywhere.herokuapp.com/${linkedInUrl}`,
+          `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(linkedInUrl)}`
+        ];
+
+        for (const corsProxyUrl of corsProxies) {
+          try {
+            console.log(`📡 Trying CORS proxy: ${corsProxyUrl.substring(0, 50)}...`);
+            const corsResponse = await fetch(corsProxyUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              }
+            });
+            if (corsResponse.ok) {
+              htmlContent = await corsResponse.text();
+              console.log(`✅ CORS proxy succeeded (length: ${htmlContent.length})`);
+              break;
+            }
+          } catch (corsError) {
+            console.log(`⚠️ CORS proxy failed, trying next...`);
+          }
+        }
+      }
+
+      if (!htmlContent) {
+        console.warn(`⚠️ Could not fetch LinkedIn page for ${linkedInUrl}`);
+        return null;
+      }
+
+      console.log(`📄 Searching for followers in HTML (length: ${htmlContent.length})`);
+
+      // Extract followers count from LinkedIn page
+      let followersCount = null;
+
+      // Pattern 1: Look for follower count in JSON-LD or meta data
+      const jsonPatterns = [
+        /"numberOfFollowers"["\s]*:["\s]*(\d+)/,
+        /followers["\s]*:["\s]*(\d+)/i,
+        /"followers"["\s]*:["\s]*"?(\d+)"?/i,
+        /followers["\s]+=\s*(\d+)/i
+      ];
+
+      for (const pattern of jsonPatterns) {
+        const match = htmlContent.match(pattern);
+        if (match && match[1]) {
+          followersCount = parseInt(match[1], 10);
+          console.log(`✅ Found followers using pattern: ${followersCount}`);
+          if (followersCount > 0) break;
+        }
+      }
+
+      // Pattern 2: Look in meta tags (og:description)
+      if (!followersCount) {
+        const metaMatch = htmlContent.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']*)["']/i);
+        if (metaMatch && metaMatch[1]) {
+          const descMatch = metaMatch[1].match(/(\d+[KMB]?)\s*(?:followers?|connections?)/i);
+          if (descMatch && descMatch[1]) {
+            let countStr = descMatch[1];
+            const multiplier: Record<string, number> = {
+              'K': 1000,
+              'M': 1000000,
+              'B': 1000000000
+            };
+
+            const lastChar = countStr.charAt(countStr.length - 1).toUpperCase();
+            if (multiplier[lastChar]) {
+              const baseNum = parseFloat(countStr.slice(0, -1));
+              followersCount = Math.round(baseNum * multiplier[lastChar]);
+            } else {
+              followersCount = parseInt(countStr, 10);
+            }
+            console.log(`✅ Found followers in meta: ${followersCount}`);
+          }
+        }
+      }
+
+      // Pattern 3: Look for text patterns with K, M, B notation
+      if (!followersCount) {
+        const textPatterns = [
+          /(\d+[.,]\d+[KMB])\s*(?:followers?|connections?)/i,
+          /(\d+[KMB])\s*(?:followers?|connections?)/i,
+          /\b(\d+)\s*(?:followers?|connections?)\b/i
+        ];
+
+        for (const pattern of textPatterns) {
+          const match = htmlContent.match(pattern);
+          if (match && match[1]) {
+            let countStr = match[1].replace(/[.,]/g, '');
+            console.log(`🔍 Found potential count: ${countStr}`);
+
+            const multiplier: Record<string, number> = {
+              'K': 1000,
+              'M': 1000000,
+              'B': 1000000000
+            };
+
+            const lastChar = countStr.charAt(countStr.length - 1).toUpperCase();
+            if (multiplier[lastChar]) {
+              const baseNum = parseFloat(countStr.slice(0, -1));
+              followersCount = Math.round(baseNum * multiplier[lastChar]);
+            } else {
+              followersCount = parseInt(countStr, 10);
+            }
+
+            if (followersCount > 0) {
+              console.log(`✅ Converted to: ${followersCount}`);
+              break;
+            }
+          }
+        }
+      }
+
+      if (followersCount && followersCount > 0) {
+        console.log(`✅ LinkedIn followers: ${followersCount}`);
+        return followersCount;
+      }
+
+      console.log(`⚠️ Could not extract followers count from HTML`);
+      return null;
+    } catch (error) {
+      console.error(`❌ Failed to fetch LinkedIn followers:`, error);
+      return null;
+    }
+  };
+
+  // Fetch YouTube subscribers directly from YouTube API
+  const fetchYouTubeSubscribers = async (channelId: string): Promise<number | null> => {
+    try {
+      const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+      console.log(`🔑 YouTube API Key available:`, !!youtubeApiKey);
+      if (youtubeApiKey) {
+        console.log(`🔑 YouTube API Key (first 20 chars):`, youtubeApiKey.substring(0, 20) + '...');
+      }
+
+      if (!youtubeApiKey) {
+        console.error('❌ VITE_YOUTUBE_API_KEY not configured in environment');
+        return null;
+      }
+
+      console.log(`🔍 Fetching YouTube data for channel: ${channelId}`);
+      const url = `https://www.googleapis.com/youtube/v3/channels?id=${encodeURIComponent(channelId)}&part=statistics&key=${youtubeApiKey}`;
+      console.log(`📡 YouTube API URL:`, url.substring(0, 80) + '...');
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ YouTube API error (${response.status}):`, errorText);
+        return null;
+      }
+
+      const data = await response.json();
+      console.log(`📊 YouTube API Response:`, data);
+
+      const subscriberCount = data.items?.[0]?.statistics?.subscriberCount;
+
+      if (subscriberCount && subscriberCount !== 'unlisted') {
+        const count = parseInt(subscriberCount, 10);
+        console.log(`✅ YouTube subscribers for ${channelId}: ${count}`);
+        return count;
+      }
+      console.log(`⚠️ YouTube subscribers unlisted or unavailable for ${channelId}`);
+      return null;
+    } catch (error) {
+      console.error(`❌ Failed to fetch YouTube subscribers:`, error);
+      return null;
+    }
+  };
+
+  // Fetch TikTok followers by scraping the profile page
+  const fetchTikTokFollowers = async (username: string): Promise<number | null> => {
+    try {
+      // Clean up username - remove @ symbol if present
+      const cleanUsername = username.replace(/^@/, '');
+      const tiktokUrl = `https://www.tiktok.com/@${cleanUsername}`;
+
+      console.log(`📱 Fetching TikTok followers for @${cleanUsername}...`);
+      console.log(`🔗 TikTok URL:`, tiktokUrl);
+
+      // Try to fetch directly first
+      let htmlContent = '';
+
+      // Method 1: Try direct fetch
+      try {
+        console.log(`📡 Attempting direct fetch...`);
+        const directResponse = await fetch(tiktokUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        if (directResponse.ok) {
+          htmlContent = await directResponse.text();
+          console.log(`✅ Direct fetch succeeded`);
+        }
+      } catch (directError) {
+        console.log(`⚠️ Direct fetch failed, trying CORS proxy...`);
+
+        // Method 2: Use CORS proxy (AllOrigins)
+        try {
+          const corsProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(tiktokUrl)}`;
+          const corsResponse = await fetch(corsProxyUrl);
+          if (corsResponse.ok) {
+            htmlContent = await corsResponse.text();
+            console.log(`✅ CORS proxy fetch succeeded`);
+          }
+        } catch (corsError) {
+          console.warn(`⚠️ CORS proxy also failed`);
+        }
+      }
+
+      if (!htmlContent) {
+        console.warn(`⚠️ Could not fetch TikTok page for @${cleanUsername}`);
+        return null;
+      }
+
+      console.log(`📄 Searching for followers in HTML (length: ${htmlContent.length})`);
+
+      // Extract followers count from HTML
+      let followersCount = null;
+
+      // Try different patterns to extract followers
+      // Pattern 1: Look for followerCount in JSON data (most common in TikTok)
+      const jsonPatterns = [
+        /"followerCount":(\d+)/,
+        /"follower_count":(\d+)/,
+        /followerCount["\']?\s*:\s*(\d+)/,
+        /"followerCount":"(\d+)"/,
+        /followerCount[\s]*=[\s]*(\d+)/,
+        /"followerCount"[\s]*:[\s]*"?(\d+)"?/,
+        /"stats"[^}]*"followerCount"[^}]*:[\s]*(\d+)/
+      ];
+
+      for (const pattern of jsonPatterns) {
+        const match = htmlContent.match(pattern);
+        if (match && match[1]) {
+          followersCount = parseInt(match[1], 10);
+          console.log(`✅ Found followers using pattern: ${pattern}, count: ${followersCount}`);
+          if (followersCount > 0) break;
+        }
+      }
+
+      // Pattern 2: Look in meta tags
+      if (!followersCount) {
+        const metaMatch = htmlContent.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']*)["']/i);
+        if (metaMatch && metaMatch[1]) {
+          const descMatch = metaMatch[1].match(/(\d+[KMB]?)\s*(?:Followers?|followers?)/i);
+          if (descMatch && descMatch[1]) {
+            let countStr = descMatch[1];
+            const multiplier: Record<string, number> = {
+              'K': 1000,
+              'M': 1000000,
+              'B': 1000000000
+            };
+
+            const lastChar = countStr.charAt(countStr.length - 1).toUpperCase();
+            if (multiplier[lastChar]) {
+              const baseNum = parseFloat(countStr.slice(0, -1));
+              followersCount = Math.round(baseNum * multiplier[lastChar]);
+            } else {
+              followersCount = parseInt(countStr, 10);
+            }
+            console.log(`✅ Found followers in meta description: ${followersCount}`);
+          }
+        }
+      }
+
+      // Pattern 3: Look for follower count in text with K, M, B notation
+      if (!followersCount) {
+        const textPatterns = [
+          /["']?followerCount["']?\s*[:=]\s*["']?([0-9.]+[KMB]?)["']?/i,
+          /Followers?["\s:]+([0-9.]+[KMB]?)\b/i,
+          /\b([0-9]+[.][0-9]+[KMB])\s*followers?\b/i,
+        ];
+
+        for (const pattern of textPatterns) {
+          const match = htmlContent.match(pattern);
+          if (match && match[1]) {
+            let countStr = match[1];
+            console.log(`🔍 Found potential count: ${countStr}`);
+
+            // Convert K, M, B notation to actual numbers
+            const multiplier: Record<string, number> = {
+              'K': 1000,
+              'M': 1000000,
+              'B': 1000000000
+            };
+
+            const lastChar = countStr.charAt(countStr.length - 1).toUpperCase();
+            if (multiplier[lastChar]) {
+              const baseNum = parseFloat(countStr.slice(0, -1));
+              followersCount = Math.round(baseNum * multiplier[lastChar]);
+            } else {
+              followersCount = parseInt(countStr, 10);
+            }
+
+            console.log(`✅ Converted to: ${followersCount}`);
+            if (followersCount > 0) break;
+          }
+        }
+      }
+
+      // Pattern 4: Last resort - look for any large number in the page that could be followers
+      if (!followersCount) {
+        // Search for patterns like "stats":{...followerCount...}
+        const statsMatch = htmlContent.match(/"stats"\s*:\s*\{[^}]*?"followerCount"\s*:\s*(\d+)/);
+        if (statsMatch && statsMatch[1]) {
+          followersCount = parseInt(statsMatch[1], 10);
+          console.log(`✅ Found followers in stats object: ${followersCount}`);
+        }
+      }
+
+      if (followersCount && followersCount > 0) {
+        console.log(`✅ TikTok followers for @${cleanUsername}: ${followersCount}`);
+        return followersCount;
+      }
+
+      console.log(`⚠️ Could not extract followers count for @${cleanUsername} from HTML`);
+      return null;
+    } catch (error) {
+      console.error(`❌ Failed to fetch TikTok followers:`, error);
+      return null;
+    }
+  };
+
+  // Enrich all detected profiles with followers data
+  const enrichSocialFollowers = async (platforms: any[]) => {
     const enrichedPlatforms = [...platforms];
+    console.log(`🔄 Starting to enrich ${platforms.length} platforms with followers data`);
 
     for (let i = 0; i < enrichedPlatforms.length; i++) {
       const platform = enrichedPlatforms[i];
+      const platformLower = platform.platform?.toLowerCase();
 
-      // Check if this is a Twitter/X profile
-      if (platform.platform?.toLowerCase() === 'twitter' || platform.platform?.toLowerCase() === 'x') {
-        try {
-          // Extract username from URL
+      try {
+        // Twitter/X - Use direct API call
+        if (platformLower === 'twitter' || platformLower === 'x') {
           let username = platform.username;
 
           if (!username && platform.url) {
-            // Try to extract from URL: https://twitter.com/username
             const match = platform.url.match(/(?:twitter\.com|x\.com)\/(@?([^/?]+))/);
             username = match ? match[2] : null;
           }
 
-          if (!username) continue;
+          if (!username) {
+            console.warn(`⚠️ Could not extract username for Twitter profile`);
+            continue;
+          }
 
           console.log(`📱 Fetching Twitter followers for @${username}`);
+          const followers = await fetchTwitterFollowersDirectly(username);
 
-          // Call the fetch-twitter-followers edge function
-          const response = await supabase.functions.invoke('fetch-twitter-followers', {
-            body: { username },
-          });
-
-          if (response.data?.success && response.data?.followers_count) {
-            console.log(`✅ Twitter followers for @${username}: ${response.data.followers_count}`);
+          if (followers !== null) {
             enrichedPlatforms[i] = {
               ...platform,
-              followers: response.data.followers_count,
+              followers: followers,
+              source: 'twitter-api'
             };
-          } else if (response.error) {
-            console.error(`❌ Error fetching Twitter followers: ${response.error.message}`);
           }
-        } catch (error) {
-          console.error(`Failed to fetch Twitter followers for ${platform.platform}:`, error);
-          // Continue with other platforms even if one fails
         }
+
+        // YouTube - Use YouTube API directly
+        else if (platformLower === 'youtube') {
+          console.log(`📱 Fetching YouTube subscribers...`);
+
+          let channelId = platform.username;
+
+          // Try to extract channel ID from URL if not available
+          if (!channelId && platform.url) {
+            const match = platform.url.match(/(?:youtube\.com\/(?:c|channel|user)\/|@)([^/?]+)/);
+            channelId = match ? match[1] : null;
+          }
+
+          if (channelId) {
+            const subscribers = await fetchYouTubeSubscribers(channelId);
+            if (subscribers !== null) {
+              enrichedPlatforms[i] = {
+                ...platform,
+                followers: subscribers,
+                source: 'youtube-api'
+              };
+            }
+          } else {
+            console.warn(`⚠️ Could not extract YouTube channel ID from ${platform.url}`);
+          }
+        }
+
+        // TikTok - Use ScrapAPI for direct scraping
+        else if (platformLower === 'tiktok') {
+          let username = platform.username;
+
+          if (!username && platform.url) {
+            // Extract username from URL: https://www.tiktok.com/@username
+            const match = platform.url.match(/(?:tiktok\.com\/@?)([^/?]+)/);
+            username = match ? match[1] : null;
+          }
+
+          if (username) {
+            const followers = await fetchTikTokFollowers(username);
+            if (followers !== null) {
+              enrichedPlatforms[i] = {
+                ...platform,
+                followers: followers,
+                source: 'scrapapi'
+              };
+            } else {
+              console.log(`⚠️ Could not fetch TikTok followers for @${username}`);
+            }
+          } else {
+            console.warn(`⚠️ Could not extract TikTok username from ${platform.url}`);
+          }
+        }
+
+        // LinkedIn - Fetch followers by scraping
+        else if (platformLower === 'linkedin') {
+          if (platform.url) {
+            // Pass the full URL to preserve company vs personal profile distinction
+            const followers = await fetchLinkedInFollowers(platform.url);
+            if (followers !== null) {
+              enrichedPlatforms[i] = {
+                ...platform,
+                followers: followers,
+                source: 'linkedin-scrape'
+              };
+            } else {
+              console.log(`⚠️ Could not fetch LinkedIn followers for ${platform.url}`);
+            }
+          } else {
+            console.warn(`⚠️ LinkedIn URL not found for platform:`, platform);
+          }
+        }
+
+        // Instagram & Facebook - Reserved for future integration
+        else if (platformLower === 'instagram' || platformLower === 'facebook') {
+          console.log(`⏳ ${platform.platform} followers integration coming soon`);
+        }
+      } catch (error) {
+        console.error(`Failed to fetch ${platform.platform} followers:`, error);
+        // Continue with other platforms even if one fails
       }
     }
 
+    console.log(`✅ Enrichment complete:`, enrichedPlatforms);
     return enrichedPlatforms;
   };
 
@@ -356,10 +833,10 @@ const SocialConnection = () => {
         businessName
       );
 
-      // Enrich detected platforms with Twitter followers
+      // Enrich detected platforms with followers data from all available APIs
       let enrichedData = { ...socialMediaData };
       if (socialMediaData.platforms.length > 0) {
-        const enrichedPlatforms = await enrichTwitterFollowers(
+        const enrichedPlatforms = await enrichSocialFollowers(
           socialMediaData.platforms
         );
         enrichedData = { ...socialMediaData, platforms: enrichedPlatforms };
@@ -1117,6 +1594,14 @@ const SocialConnection = () => {
                                         )}
                                       </div>
                                       <div className="flex-1">
+                                        {/* Followers Count Display */}
+                                        <div className="mb-2 flex items-center gap-2">
+                                          <Users className="h-4 w-4 text-gray-500" />
+                                          <span className="text-sm font-medium text-gray-700">
+                                            Followers: {profile.followers ? profile.followers.toLocaleString() : 'N/A'}
+                                          </span>
+                                        </div>
+
                                         <div className="flex items-center gap-2 mb-1">
                                           <h3 className="font-semibold capitalize">
                                             {profile.platform}

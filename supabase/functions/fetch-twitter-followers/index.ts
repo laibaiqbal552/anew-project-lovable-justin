@@ -22,55 +22,33 @@ async function fetchTwitterFollowers(username: string, bearerToken: string): Pro
   try {
     console.log(`🐦 Fetching Twitter followers for: @${username}`)
 
-    // Step 1: Look up user by username
-    const lookupUrl = `https://api.twitter.com/2/users/by/username/${encodeURIComponent(username)}`
-    const lookupHeaders = {
+    // Direct request to get user with public_metrics
+    const url = `https://api.x.com/2/users/by/username/${encodeURIComponent(username)}?user.fields=public_metrics`
+    const headers = {
       'Authorization': `Bearer ${bearerToken}`,
       'User-Agent': 'TwitterFollowersBot/1.0',
     }
 
-    const lookupResponse = await fetch(lookupUrl, {
+    console.log(`📡 Calling Twitter API: ${url.substring(0, 80)}...`)
+
+    const response = await fetch(url, {
       method: 'GET',
-      headers: lookupHeaders,
+      headers: headers,
       signal: AbortSignal.timeout(8000),
     })
 
-    if (!lookupResponse.ok) {
-      const error = await lookupResponse.text()
-      console.error(`❌ Twitter lookup failed (${lookupResponse.status}):`, error)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`❌ Twitter API failed (${response.status}):`, errorText)
       return null
     }
 
-    const lookupData = await lookupResponse.json()
-    console.log(`✅ User lookup response:`, JSON.stringify(lookupData).substring(0, 200))
+    const data = await response.json()
+    console.log(`✅ Twitter API response:`, JSON.stringify(data).substring(0, 300))
 
-    if (!lookupData.data?.id) {
-      console.warn(`⚠️ No user found for: @${username}`)
-      return null
-    }
+    const followersCount = data.data?.public_metrics?.followers_count
 
-    const userId = lookupData.data.id
-
-    // Step 2: Get user details including followers count
-    const userUrl = `https://api.twitter.com/2/users/${userId}?user.fields=public_metrics`
-    const userResponse = await fetch(userUrl, {
-      method: 'GET',
-      headers: lookupHeaders,
-      signal: AbortSignal.timeout(8000),
-    })
-
-    if (!userResponse.ok) {
-      const error = await userResponse.text()
-      console.error(`❌ Twitter user details failed (${userResponse.status}):`, error)
-      return null
-    }
-
-    const userData = await userResponse.json()
-    console.log(`✅ User details response:`, JSON.stringify(userData).substring(0, 200))
-
-    const followersCount = userData.data?.public_metrics?.followers_count
-
-    if (followersCount !== undefined && followersCount !== null) {
+    if (followersCount !== undefined && followersCount !== null && followersCount > 0) {
       console.log(`✅ Twitter followers for @${username}: ${followersCount}`)
       return followersCount
     }
