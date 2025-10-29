@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import SplashScreen from '@/components/SplashScreen';
 import {
   BarChart3,
-  Globe,
   Users,
   TrendingUp,
   Shield,
@@ -17,9 +16,7 @@ import {
   Loader2,
   Download,
   Eye,
-  Clock,
-  Zap as Lightning,
-  ArrowRight
+  Clock
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -42,7 +39,7 @@ const Analysis = () => {
   const [, setCurrentStep] = useState(0);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [currentStepName, setCurrentStepName] = useState('Initializing...');
-  const [showSplash, setShowSplash] = useState(false);
+  const [showSplash] = useState(false);
   const cancelProgressRef = useRef(false);
   const [reportId, setReportId] = useState<string | null>(null);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([

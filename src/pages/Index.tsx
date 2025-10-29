@@ -202,10 +202,28 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="py-12 bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-400">
-            © 2024 TopServ Digital. Built with precision for business growth.
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-gray-400">
+              © 2024 TopServ Digital. Built with precision for business growth.
+            </p>
+            <div className="flex gap-6">
+              <Button 
+                variant="link" 
+                className="text-gray-400 hover:text-white"
+                onClick={() => navigate('/terms')}
+              >
+                Terms & Conditions
+              </Button>
+              <Button 
+                variant="link" 
+                className="text-gray-400 hover:text-white"
+                onClick={() => navigate('/privacy')}
+              >
+                Privacy Policy
+              </Button>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

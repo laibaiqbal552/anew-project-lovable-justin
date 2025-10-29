@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,7 +6,7 @@ import * as z from "zod";
 import { useLoadScript, StandaloneSearchBox } from "@react-google-maps/api";
 
 // Google Maps libraries - must be defined outside component to avoid performance warning
-const GOOGLE_MAPS_LIBRARIES = ["places"] as const;
+const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
 import { Button } from "@/components/ui/button";
 import {
   Card,

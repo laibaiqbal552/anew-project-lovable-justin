@@ -40,21 +40,9 @@ export async function testSocialMediaDetector() {
 
   console.log('\n---\n');
 
-  // Test case 3: Business name variations
+  // Test case 3: Business name variations (removed - methods no longer exist)
   try {
-    console.log('📍 Test 3: Testing business name variations...');
-    const testBusinessNames = [
-      'Tech Solutions Inc.',
-      'Green Earth Consulting',
-      'ABC Marketing & Design'
-    ];
-
-    for (const businessName of testBusinessNames) {
-      const variations = socialMediaDetector['generateUsernameVariations'](
-        socialMediaDetector['cleanBusinessName'](businessName)
-      );
-      console.log(`Business: "${businessName}" → Username variations:`, variations);
-    }
+    console.log('📍 Test 3: Testing business name variations (skipped)...');
   } catch (error) {
     console.log('❌ Test 3 Failed:', error);
   }

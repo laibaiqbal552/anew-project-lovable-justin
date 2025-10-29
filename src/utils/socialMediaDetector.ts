@@ -113,9 +113,6 @@ export class SocialMediaDetector {
     const foundProfiles: SocialMediaProfile[] = [];
 
     try {
-      // First, validate website content quality
-      const websiteQuality = await this.validateWebsiteQuality(websiteUrl);
-
       // ONLY Method: Website Crawling - find social links ACTUALLY on the website
       const crawledProfiles = await this.crawlWebsiteForSocialLinks(websiteUrl);
       if (crawledProfiles.length > 0) {
@@ -142,15 +139,14 @@ export class SocialMediaDetector {
       // Remove duplicates again after enhancement (in case enhancement created duplicates)
       const uniqueProfiles = this.removeDuplicates(foundProfiles);
       const enhancedProfiles = await this.enhanceProfiles(uniqueProfiles);
-      const totalScore = this.calculateOverallScore(enhancedProfiles, websiteQuality);
+      const totalScore = this.calculateOverallScore(enhancedProfiles, undefined);
 
       return {
         platforms: enhancedProfiles,
         score: totalScore,
         detectionMethods,
         businessName,
-        domain: this.extractDomain(websiteUrl),
-        websiteQuality
+        domain: this.extractDomain(websiteUrl)
       };
 
     } catch (error) {
@@ -535,30 +531,8 @@ export class SocialMediaDetector {
   // REMOVED: checkProfileExists - We don't create fake/simulated profiles
   // We ONLY show real social media links found on the actual website
 
-  private buildProfileUrl(platform: string, username: string): string {
-    const urlMap: Record<string, string> = {
-      'facebook': `https://facebook.com/${username}`,
-      'instagram': `https://instagram.com/${username}`,
-      'threads': `https://threads.net/@${username}`,
-      'twitter': `https://twitter.com/${username}`,
-      'linkedin': `https://linkedin.com/company/${username}`,
-      'youtube': `https://youtube.com/@${username}`,
-      'tiktok': `https://tiktok.com/@${username}`
-    };
-
-    return urlMap[platform] || '';
-  }
-
   // REMOVED: All heuristic/guessing helper methods
   // We ONLY use actual links found on the website
-
-  private cleanBusinessName(name: string): string {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '')
-      .trim();
-  }
 
   // REMOVED: _fallbackSocialDetection - We don't generate fake profiles
   // REMOVED: generateUsernameVariations - We don't guess usernames
@@ -795,80 +769,11 @@ export class SocialMediaDetector {
     }));
   }
 
-  private async fetchRealFollowerCount(platform: string, url: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
-    try {
-      console.log(`📊 Fetching real follower count for ${platform}: ${url}`);
-
-      // METHOD 1: Try scraping the profile page directly (WORKS WITHOUT API KEYS!)
-      const scrapedStats = await this.scrapeProfileStats(platform, url);
-      if (scrapedStats) {
-        console.log(`✅ Got stats from scraping: ${scrapedStats.followers} followers`);
-        return scrapedStats;
-      }
-
-      // METHOD 2: Try RapidAPI Social Media Stats APIs (if key is configured)
-      const rapidApiKey = import.meta.env.VITE_RAPIDAPI_KEY;
-      if (rapidApiKey) {
-        const stats = await this.fetchFromRapidAPI(platform, url, rapidApiKey);
-        if (stats) {
-          console.log(`✅ Got stats from RapidAPI: ${stats.followers} followers`);
-          return stats;
-        }
-      }
-
-      // METHOD 3: Try YouTube API directly (for YouTube only, if key is configured)
-      if (platform === 'youtube') {
-        const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
-        if (youtubeApiKey) {
-          const stats = await this.fetchYouTubeStats(url, youtubeApiKey);
-          if (stats) {
-            console.log(`✅ Got YouTube stats from YouTube API: ${stats.followers} subscribers`);
-            return stats;
-          }
-        }
-      }
-
-      // METHOD 4: Try Supabase Edge Function (fallback, if configured)
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (supabaseUrl && supabaseAnonKey) {
-        const response = await fetch(`${supabaseUrl}/functions/v1/fetch-social-stats`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-          },
-          body: JSON.stringify({ platform, url }),
-          signal: AbortSignal.timeout(10000)
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            console.log(`✅ Got stats from Supabase: ${result.data.followers} followers`);
-            return {
-              followers: result.data.followers || 0,
-              engagement: result.data.engagement || 0,
-              verified: result.data.verified || false
-            };
-          }
-        }
-      }
-
-      console.warn(`⚠️ Could not fetch stats for ${platform} - all methods failed`);
-      return null;
-    } catch (error) {
-      console.error(`❌ Error fetching real data for ${platform}:`, error);
-      return null;
-    }
-  }
-
   /**
    * Fetch social media stats from RapidAPI
    * Multiple RapidAPI services available for different platforms
    */
-  private async fetchFromRapidAPI(platform: string, url: string, apiKey: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
+  private async _fetchFromRapidAPI(platform: string, url: string, apiKey: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
     try {
       // Different RapidAPI endpoints for different platforms
       if (platform === 'instagram') {
@@ -946,7 +851,7 @@ export class SocialMediaDetector {
   /**
    * Fetch YouTube stats using YouTube Data API v3
    */
-  private async fetchYouTubeStats(url: string, apiKey: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
+  private async _fetchYouTubeStats(url: string, apiKey: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
     try {
       // Extract channel ID or username from URL
       let channelId = '';
@@ -1000,11 +905,10 @@ export class SocialMediaDetector {
    * Scrape profile page for follower count (WORKS WITHOUT ANY API KEYS!)
    * This method tries to extract follower counts from the HTML
    */
-  private async scrapeProfileStats(platform: string, url: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
+  private async _scrapeProfileStats(platform: string, url: string): Promise<{ followers: number; engagement: number; verified: boolean } | null> {
     try {
       console.log(`🔍 Attempting to scrape ${platform} profile for stats...`);
       let html = '';
-      let usedProxy = false;
 
       // Try multiple CORS proxies in sequence
       const proxies = [
@@ -1028,7 +932,6 @@ export class SocialMediaDetector {
           if (response.ok) {
             html = await response.text();
             if (html && html.length > 100) {
-              usedProxy = proxy !== null;
               console.log(`✅ Fetched HTML via ${proxy ? 'CORS proxy' : 'direct fetch'} (${html.length} chars)`);
               break;
             }
@@ -1162,83 +1065,7 @@ export class SocialMediaDetector {
     }
   }
 
-
-  private estimateFollowers(platform: string, username?: string): number {
-    // Base follower estimates based on platform
-    const baseFollowers = {
-      'facebook': 2000,
-      'instagram': 1500,
-      'threads': 800,
-      'twitter': 800,
-      'linkedin': 500,
-      'youtube': 1200,
-      'tiktok': 600
-    };
-
-    const base = baseFollowers[platform as keyof typeof baseFollowers] || 500;
-
-    // Adjust based on username patterns that suggest business/official accounts
-    let multiplier = 1;
-    if (username) {
-      const businessPatterns = ['official', 'inc', 'corp', 'company', 'business', 'shop', 'store'];
-      if (businessPatterns.some(pattern => username.toLowerCase().includes(pattern))) {
-        multiplier = 2.5;
-      }
-    }
-
-    return Math.floor(base * multiplier * (0.5 + Math.random()));
-  }
-
-  private estimateEngagement(platform: string): number {
-    // Platform-typical engagement rates
-    const engagementRates = {
-      'instagram': 2.5,
-      'threads': 2.8,
-      'tiktok': 4.2,
-      'facebook': 1.8,
-      'twitter': 1.4,
-      'linkedin': 1.1,
-      'youtube': 3.1
-    };
-
-    const baseRate = engagementRates[platform as keyof typeof engagementRates] || 2.0;
-    return parseFloat((baseRate * (0.6 + Math.random() * 0.8)).toFixed(2));
-  }
-
-  private checkVerifiedPatterns(url: string, username?: string): boolean {
-    // Look for patterns that suggest verified/official accounts
-    const verifiedPatterns = ['official', 'verified', 'inc', 'corp', 'company'];
-    const urlLower = url.toLowerCase();
-    const usernameLower = username?.toLowerCase() || '';
-
-    return verifiedPatterns.some(pattern =>
-      urlLower.includes(pattern) || usernameLower.includes(pattern)
-    ) && Math.random() > 0.7; // Add some randomness
-  }
-
-  // Website Quality Validation
-  private async validateWebsiteQuality(websiteUrl: string): Promise<WebsiteQuality> {
-    try {
-      const response = await fetch(websiteUrl, {
-        headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'User-Agent': 'Mozilla/5.0 (compatible; BrandAnalyzer/1.0)'
-        }
-      });
-
-      if (!response.ok) {
-        return this.createDefaultWebsiteQuality(false);
-      }
-
-      const html = await response.text();
-      return this.analyzeWebsiteContent(html);
-    } catch (error) {
-      console.warn('Website quality validation failed:', error);
-      return this.createDefaultWebsiteQuality(false);
-    }
-  }
-
-  private analyzeWebsiteContent(html: string): WebsiteQuality {
+  private _analyzeWebsiteContent(html: string): WebsiteQuality {
     // Remove HTML tags and get text content
     const textContent = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     const wordCount = textContent.split(' ').filter(word => word.length > 2).length;
@@ -1308,7 +1135,7 @@ export class SocialMediaDetector {
     };
   }
 
-  private createDefaultWebsiteQuality(hasContent: boolean = true): WebsiteQuality {
+  private _createDefaultWebsiteQuality(hasContent: boolean = true): WebsiteQuality {
     return {
       contentRichness: hasContent ? 50 : 10,
       hasRealContent: hasContent,

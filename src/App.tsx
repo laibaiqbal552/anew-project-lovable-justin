@@ -14,6 +14,8 @@ import SampleReport from "./pages/SampleReport";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import AccountHub from "./pages/AccountHub";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import SiteHeader from "@/components/SiteHeader";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +41,8 @@ function AppContent() {
               <Route path="/sample" element={<SampleReport />} />
               <Route path="/account" element={<AccountHub />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/terms" element={<TermsAndConditions />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>
@@ -59,7 +63,7 @@ function App() {
         setInitProgress(20);
 
         // Check if user is authenticated
-        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.auth.getUser();
         setInitProgress(60);
 
         // Small delay to show progress

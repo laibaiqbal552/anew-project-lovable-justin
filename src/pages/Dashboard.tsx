@@ -7,7 +7,6 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import BusinessSelector from '@/components/BusinessSelector';
-import { TrustpilotCardSkeleton } from '@/components/SkeletonLoader';
 import {
   BarChart3,
   Globe,
@@ -21,14 +20,10 @@ import {
   Share,
   AlertTriangle,
   CheckCircle,
-  ThumbsUp,
   ExternalLink,
   Loader2,
   Phone,
-  Mail,
-  MessageSquare,
-  Eye,
-  Clock
+  Mail
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -249,7 +244,7 @@ const Dashboard = () => {
         const { data: userBusinesses } = await supabase
           .from('businesses')
           .select('id')
-          .eq('user_id', user.id)
+          .eq('user_id', user?.id || '')
           .order('created_at', { ascending: false })
           .limit(1);
 

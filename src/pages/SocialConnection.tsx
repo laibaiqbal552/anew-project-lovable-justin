@@ -117,7 +117,7 @@ const socialPlatforms: SocialPlatform[] = [
 const SocialConnection = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [, setUser] = useState<any>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [socialUrls, setSocialUrls] = useState<Record<string, string>>({});
   const [connectedAccounts, setConnectedAccounts] = useState<
@@ -130,9 +130,9 @@ const SocialConnection = () => {
   const [hasRunDetection, setHasRunDetection] = useState(false);
   const [siteUrl, setSiteUrl] = useState<string>("");
   const [bizName, setBizName] = useState<string>("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [facebookAccessToken, setFacebookAccessToken] = useState<string | null>(null);
-  const [isFetchingFacebookData, setIsFetchingFacebookData] = useState(false);
+  const [, setIsAuthenticated] = useState(false);
+  const [, setFacebookAccessToken] = useState<string | null>(null);
+  const [, setIsFetchingFacebookData] = useState(false);
 
   useEffect(() => {
     checkUserAndBusiness();
