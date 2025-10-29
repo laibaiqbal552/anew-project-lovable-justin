@@ -1,12 +1,18 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import BusinessSelector from '@/components/BusinessSelector';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import BusinessSelector from "@/components/BusinessSelector";
 import {
   BarChart3,
   Globe,
@@ -23,13 +29,13 @@ import {
   ExternalLink,
   Loader2,
   Phone,
-  Mail
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import BrandScoreChart from '@/components/charts/BrandScoreChart';
-import ScoreBreakdownChart from '@/components/charts/ScoreBreakdownChart';
-import TrendChart from '@/components/charts/TrendChart';
+  Mail,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import BrandScoreChart from "@/components/charts/BrandScoreChart";
+import ScoreBreakdownChart from "@/components/charts/ScoreBreakdownChart";
+import TrendChart from "@/components/charts/TrendChart";
 
 interface ScoreCardProps {
   title: string;
@@ -42,27 +48,35 @@ interface ScoreCardProps {
   breakdown?: any;
 }
 
-const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, breakdown }: ScoreCardProps) => {
+const ScoreCard = ({
+  title,
+  score,
+  maxScore,
+  description,
+  icon: Icon,
+  report,
+  breakdown,
+}: ScoreCardProps) => {
   const percentage = (score / maxScore) * 100;
   const [showDetails, setShowDetails] = useState(false);
 
   // Check if there's actual breakdown data to show
-  const hasBreakdownData = breakdown && (
-    (breakdown.factors && breakdown.factors.length > 0) ||
-    (breakdown.strengths && breakdown.strengths.length > 0) ||
-    (breakdown.weaknesses && breakdown.weaknesses.length > 0)
-  );
+  const hasBreakdownData =
+    breakdown &&
+    ((breakdown.factors && breakdown.factors.length > 0) ||
+      (breakdown.strengths && breakdown.strengths.length > 0) ||
+      (breakdown.weaknesses && breakdown.weaknesses.length > 0));
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const getScoreBg = (score: number) => {
-    if (score >= 80) return 'bg-green-100';
-    if (score >= 60) return 'bg-yellow-100';
-    return 'bg-red-100';
+    if (score >= 80) return "bg-green-100";
+    if (score >= 60) return "bg-yellow-100";
+    return "bg-red-100";
   };
 
   const handleCardClick = () => {
@@ -72,46 +86,77 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
   };
 
   return (
-    <Card className={hasBreakdownData ? "card-hover cursor-pointer" : ""} onClick={handleCardClick}>
+    <Card
+      className={hasBreakdownData ? "card-hover cursor-pointer" : ""}
+      onClick={handleCardClick}
+    >
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 ${getScoreBg(score)} rounded-lg flex items-center justify-center`}>
+            <div
+              className={`w-10 h-10 ${getScoreBg(
+                score
+              )} rounded-lg flex items-center justify-center`}
+            >
               <Icon className={`h-5 w-5 ${getScoreColor(score)}`} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">{title}</h3>
-                {report?.data_quality?.website_api && title === 'Website Strength' && (
-                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
-                    Live Data
-                  </Badge>
-                )}
-                {report?.data_quality?.social_api && title === 'Social Media' && (
-                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
-                    Live Data
-                  </Badge>
-                )}
-                {report?.data_quality?.reputation_api && title === 'Online Reputation' && (
-                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
-                    Live Data
-                  </Badge>
-                )}
-                {!report?.data_quality?.website_api && title === 'Website Strength' && (
-                  <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
-                    AI‑sourced
-                  </Badge>
-                )}
-                {!report?.data_quality?.social_api && title === 'Social Media' && (
-                  <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
-                    AI‑sourced
-                  </Badge>
-                )}
-                {!report?.data_quality?.reputation_api && title === 'Online Reputation' && (
-                  <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
-                    AI‑sourced
-                  </Badge>
-                )}
+                {report?.data_quality?.website_api &&
+                  title === "Website Strength" && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-green-100 text-green-700 border-green-200"
+                    >
+                      Live Data
+                    </Badge>
+                  )}
+                {report?.data_quality?.social_api &&
+                  title === "Social Media" && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-green-100 text-green-700 border-green-200"
+                    >
+                      Live Data
+                    </Badge>
+                  )}
+                {report?.data_quality?.reputation_api &&
+                  title === "Online Reputation" && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-green-100 text-green-700 border-green-200"
+                    >
+                      Live Data
+                    </Badge>
+                  )}
+                {!report?.data_quality?.website_api &&
+                  title === "Website Strength" && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                    >
+                      AI‑sourced
+                    </Badge>
+                  )}
+                {!report?.data_quality?.social_api &&
+                  title === "Social Media" && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                    >
+                      AI‑sourced
+                    </Badge>
+                  )}
+                {!report?.data_quality?.reputation_api &&
+                  title === "Online Reputation" && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                    >
+                      AI‑sourced
+                    </Badge>
+                  )}
               </div>
               <p className="text-sm text-gray-600">{description}</p>
             </div>
@@ -128,7 +173,9 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
         {showDetails && breakdown && (
           <div className="mt-4 pt-4 border-t space-y-3 animate-in slide-in-from-top-2">
             <div>
-              <h4 className="font-semibold text-sm text-gray-700 mb-2">What We Measured:</h4>
+              <h4 className="font-semibold text-sm text-gray-700 mb-2">
+                What We Measured:
+              </h4>
               <div className="flex flex-wrap gap-1">
                 {breakdown.factors?.map((factor: string, idx: number) => (
                   <Badge key={idx} variant="outline" className="text-xs">
@@ -140,7 +187,9 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
 
             {breakdown.strengths && breakdown.strengths.length > 0 && (
               <div>
-                <h4 className="font-semibold text-sm text-green-700 mb-1">✓ Strengths:</h4>
+                <h4 className="font-semibold text-sm text-green-700 mb-1">
+                  ✓ Strengths:
+                </h4>
                 <ul className="text-xs text-gray-600 space-y-1">
                   {breakdown.strengths.map((strength: string, idx: number) => (
                     <li key={idx} className="flex items-start gap-1">
@@ -154,7 +203,9 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
 
             {breakdown.weaknesses && breakdown.weaknesses.length > 0 && (
               <div>
-                <h4 className="font-semibold text-sm text-orange-700 mb-1">⚠ Areas to Improve:</h4>
+                <h4 className="font-semibold text-sm text-orange-700 mb-1">
+                  ⚠ Areas to Improve:
+                </h4>
                 <ul className="text-xs text-gray-600 space-y-1">
                   {breakdown.weaknesses.map((weakness: string, idx: number) => (
                     <li key={idx} className="flex items-start gap-1">
@@ -166,25 +217,32 @@ const ScoreCard = ({ title, score, maxScore, description, icon: Icon, report, br
               </div>
             )}
 
-            {breakdown.improvement_areas && breakdown.improvement_areas.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-sm text-brand-700 mb-1">→ Next Steps:</h4>
-                <ul className="text-xs text-gray-600 space-y-1">
-                  {breakdown.improvement_areas.slice(0, 3).map((action: string, idx: number) => (
-                    <li key={idx} className="flex items-start gap-1">
-                      <span className="text-brand-600 mt-0.5">•</span>
-                      <span>{action}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {breakdown.improvement_areas &&
+              breakdown.improvement_areas.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm text-brand-700 mb-1">
+                    → Next Steps:
+                  </h4>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    {breakdown.improvement_areas
+                      .slice(0, 3)
+                      .map((action: string, idx: number) => (
+                        <li key={idx} className="flex items-start gap-1">
+                          <span className="text-brand-600 mt-0.5">•</span>
+                          <span>{action}</span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
           </div>
         )}
 
         {hasBreakdownData && (
           <p className="text-xs text-gray-500 text-center mt-3">
-            {showDetails ? '▲ Click to collapse' : '▼ Click for detailed breakdown'}
+            {showDetails
+              ? "▲ Click to collapse"
+              : "▼ Click for detailed breakdown"}
           </p>
         )}
       </CardContent>
@@ -198,7 +256,9 @@ const Dashboard = () => {
   const [business, setBusiness] = useState<any>(null);
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [currentBusinessId, setCurrentBusinessId] = useState<string | null>(null);
+  const [currentBusinessId, setCurrentBusinessId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     loadDashboardData();
@@ -206,108 +266,113 @@ const Dashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      console.log('Loading dashboard data...');
-      const { data: { user }, error } = await supabase.auth.getUser();
-      const isGuest = localStorage.getItem('isGuestUser') === 'true';
+      console.log("Loading dashboard data...");
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+      const isGuest = localStorage.getItem("isGuestUser") === "true";
 
       if (error && !isGuest) {
-        console.error('Auth error:', error);
-        navigate('/');
+        console.error("Auth error:", error);
+        navigate("/");
         return;
       }
 
       if (!user && !isGuest) {
-        console.log('No authenticated user and not guest, redirecting to home');
-        navigate('/');
+        console.log("No authenticated user and not guest, redirecting to home");
+        navigate("/");
         return;
       }
 
       if (user) {
         setUser(user);
-        console.log('User authenticated:', user.id);
+        console.log("User authenticated:", user.id);
       } else if (isGuest) {
-        console.log('Guest user accessing dashboard');
+        console.log("Guest user accessing dashboard");
         setUser(null); // Guest users remain unauthenticated
       }
 
-      let businessId = currentBusinessId || localStorage.getItem('currentBusinessId');
-      const reportId = localStorage.getItem('currentReportId');
-      
+      let businessId =
+        currentBusinessId || localStorage.getItem("currentBusinessId");
+      const reportId = localStorage.getItem("currentReportId");
+
       // If no business ID, try to get the user's first business
       if (!businessId) {
         if (isGuest) {
-          console.log('Guest user has no business ID, redirecting to setup');
-          navigate('/setup');
+          console.log("Guest user has no business ID, redirecting to setup");
+          navigate("/setup");
           return;
         }
 
         const { data: userBusinesses } = await supabase
-          .from('businesses')
-          .select('id')
-          .eq('user_id', user?.id || '')
-          .order('created_at', { ascending: false })
+          .from("businesses")
+          .select("id")
+          .eq("user_id", user?.id || "")
+          .order("created_at", { ascending: false })
           .limit(1);
 
         if (userBusinesses && userBusinesses.length > 0) {
           businessId = userBusinesses[0].id;
           if (businessId) {
-            localStorage.setItem('currentBusinessId', businessId);
+            localStorage.setItem("currentBusinessId", businessId);
             setCurrentBusinessId(businessId);
           }
         } else {
-          console.log('No business found, redirecting to setup');
-          navigate('/setup');
+          console.log("No business found, redirecting to setup");
+          navigate("/setup");
           return;
         }
       }
 
       if (!businessId) {
-        navigate('/setup');
+        navigate("/setup");
         return;
       }
 
-      console.log('Loading business:', businessId);
+      console.log("Loading business:", businessId);
 
       // Load business details
       let businessData;
 
       if (isGuest) {
         // Load guest business data from localStorage
-        console.log('Loading guest business from localStorage');
+        console.log("Loading guest business from localStorage");
         businessData = {
           id: businessId,
-          business_name: localStorage.getItem('businessName') || 'Your Business',
-          website_url: localStorage.getItem('businessWebsiteUrl') || '',
-          industry: localStorage.getItem('businessIndustry') || '',
-          address: localStorage.getItem('businessAddress') || '',
-          phone: localStorage.getItem('businessPhone') || '',
-          description: localStorage.getItem('businessDescription') || '',
+          business_name:
+            localStorage.getItem("businessName") || "Your Business",
+          website_url: localStorage.getItem("businessWebsiteUrl") || "",
+          industry: localStorage.getItem("businessIndustry") || "",
+          address: localStorage.getItem("businessAddress") || "",
+          phone: localStorage.getItem("businessPhone") || "",
+          description: localStorage.getItem("businessDescription") || "",
         };
       } else {
         const { data: dbBusinessData, error: businessError } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('id', businessId)
+          .from("businesses")
+          .select("*")
+          .eq("id", businessId)
           .single();
 
         if (businessError) {
-          console.error('Error loading business:', businessError);
-          if (businessError.code === 'PGRST116') {
+          console.error("Error loading business:", businessError);
+          if (businessError.code === "PGRST116") {
             // No business found
-            console.log('Business not found, redirecting to setup');
-            localStorage.removeItem('currentBusinessId');
-            localStorage.removeItem('currentReportId');
-            navigate('/setup');
+            console.log("Business not found, redirecting to setup");
+            localStorage.removeItem("currentBusinessId");
+            localStorage.removeItem("currentReportId");
+            navigate("/setup");
             return;
           }
           throw businessError;
         }
 
         if (!dbBusinessData) {
-          console.log('No business data found, redirecting to setup');
-          localStorage.removeItem('currentBusinessId');
-          localStorage.removeItem('currentReportId');
-          navigate('/setup');
+          console.log("No business data found, redirecting to setup");
+          localStorage.removeItem("currentBusinessId");
+          localStorage.removeItem("currentReportId");
+          navigate("/setup");
           return;
         }
 
@@ -315,50 +380,52 @@ const Dashboard = () => {
       }
 
       setBusiness(businessData);
-      console.log('Business loaded:', businessData.business_name);
+      console.log("Business loaded:", businessData.business_name);
 
       // Load report details if we have a report ID
       if (reportId) {
-        console.log('Loading report:', reportId);
+        console.log("Loading report:", reportId);
 
         let reportData;
 
         if (isGuest) {
           // Load guest report from localStorage
-          console.log('Loading guest report from localStorage');
-          const guestResults = localStorage.getItem('guestAnalysisResults');
+          console.log("Loading guest report from localStorage");
+          const guestResults = localStorage.getItem("guestAnalysisResults");
           if (guestResults) {
             reportData = JSON.parse(guestResults);
           } else {
-            console.log('No guest analysis results found, redirecting to analysis');
-            navigate('/analysis');
+            console.log(
+              "No guest analysis results found, redirecting to analysis"
+            );
+            navigate("/analysis");
             return;
           }
         } else {
           const { data: dbReportData, error: reportError } = await supabase
-            .from('brand_reports')
-            .select('*')
-            .eq('id', reportId)
+            .from("brand_reports")
+            .select("*")
+            .eq("id", reportId)
             .single();
 
           if (reportError) {
-            console.error('Error loading report:', reportError);
-            if (reportError.code === 'PGRST116') {
+            console.error("Error loading report:", reportError);
+            if (reportError.code === "PGRST116") {
               // No report found
-              console.log('Report not found, redirecting to analysis');
-              localStorage.removeItem('currentReportId');
-              navigate('/analysis');
+              console.log("Report not found, redirecting to analysis");
+              localStorage.removeItem("currentReportId");
+              navigate("/analysis");
               return;
             }
             // Don't throw error for report issues, just redirect to analysis
-            navigate('/analysis');
+            navigate("/analysis");
             return;
           }
 
           if (!dbReportData) {
-            console.log('No report data found, redirecting to analysis');
-            localStorage.removeItem('currentReportId');
-            navigate('/analysis');
+            console.log("No report data found, redirecting to analysis");
+            localStorage.removeItem("currentReportId");
+            navigate("/analysis");
             return;
           }
 
@@ -367,72 +434,164 @@ const Dashboard = () => {
 
         // Sanitize recommendations to purge any legacy "connect api" messages
         let sanitized = reportData;
-        const recs: any[] = Array.isArray(reportData?.recommendations) ? reportData.recommendations : [];
-        const isConnecty = (text?: string) => typeof text === 'string' && /connect\s+.*api|connect\s+api|connect\s+apis|missing\s+apis/i.test(text);
+        const recs: any[] = Array.isArray(reportData?.recommendations)
+          ? reportData.recommendations
+          : [];
+        const isConnecty = (text?: string) =>
+          typeof text === "string" &&
+          /connect\s+.*api|connect\s+api|connect\s+apis|missing\s+apis/i.test(
+            text
+          );
         const filtered = recs.filter((rec: any) => {
           if (!rec) return false;
-          if (isConnecty(rec?.category) || isConnecty(rec?.action) || isConnecty(rec?.impact)) return false;
-          if (Array.isArray(rec?.specific_tasks) && rec.specific_tasks.some((t: string) => isConnecty(t))) return false;
+          if (
+            isConnecty(rec?.category) ||
+            isConnecty(rec?.action) ||
+            isConnecty(rec?.impact)
+          )
+            return false;
+          if (
+            Array.isArray(rec?.specific_tasks) &&
+            rec.specific_tasks.some((t: string) => isConnecty(t))
+          )
+            return false;
           return true;
         });
         if (filtered.length !== recs.length) {
           const { error: updErr } = await supabase
-            .from('brand_reports')
+            .from("brand_reports")
             .update({ recommendations: filtered })
-            .eq('id', reportData.id);
-          if (updErr) console.warn('Failed to purge legacy recommendations:', updErr);
+            .eq("id", reportData.id);
+          if (updErr)
+            console.warn("Failed to purge legacy recommendations:", updErr);
           sanitized = { ...reportData, recommendations: filtered } as any;
         }
         setReport(sanitized);
-        console.log('Report loaded:', reportData.id);
+        console.log("Report loaded:", reportData.id);
       } else {
-        console.log('No report ID found, redirecting to analysis to create one');
-        navigate('/analysis');
+        console.log(
+          "No report ID found, redirecting to analysis to create one"
+        );
+        navigate("/analysis");
         return;
       }
-
     } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      toast.error('Failed to load dashboard data. Please try again.');
-      navigate('/');
+      console.error("Error loading dashboard data:", err);
+      toast.error("Failed to load dashboard data. Please try again.");
+      navigate("/");
     } finally {
       setLoading(false);
     }
   };
 
   const getOverallScoreColor = (score: number) => {
-    if (!score || isNaN(score)) return 'text-gray-600';
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+    if (!score || isNaN(score)) return "text-gray-600";
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const getOverallScoreLabel = (score: number) => {
-    if (!score || isNaN(score)) return 'Unknown';
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Good';
-    return 'Needs Improvement';
+    if (!score || isNaN(score)) return "Unknown";
+    if (score >= 80) return "Excellent";
+    if (score >= 60) return "Good";
+    return "Needs Improvement";
   };
 
   const handleBookConsultation = () => {
-    window.open('https://book.topservdigital.com/discovery-survey', '_blank', 'noopener,noreferrer');
+    window.open(
+      "https://book.topservdigital.com/discovery-survey",
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
-  const handleDownloadReport = () => {
-    toast.info('PDF download functionality coming soon!');
+  const handleDownloadReport = async () => {
+    try {
+      toast.info("Generating PDF report...");
+
+      const { data, error } = await supabase.functions.invoke(
+        "generate-pdf-report",
+        {
+          body: {
+            businessName: business.business_name,
+            reportId:
+              report.id ||
+              localStorage.getItem("currentReportId") ||
+              "guest-report",
+            reportData: {
+              overall_score: report.overall_score || 0,
+              website_score: report.website_score || 0,
+              social_score: report.social_score || 0,
+              reputation_score: report.reputation_score || 0,
+              visibility_score: report.visibility_score || 0,
+              consistency_score: report.consistency_score || 0,
+              positioning_score: report.positioning_score || 0,
+              recommendations: report.recommendations || [],
+            },
+          },
+        }
+      );
+
+      if (error) {
+        console.error("PDF generation error:", error);
+        toast.error("Failed to generate PDF report. Please try again.");
+        return;
+      }
+
+      if (data && data.success && data.pdf && data.pdf.html) {
+        // Create a new window to print the HTML as PDF
+        const printWindow = window.open("", "_blank");
+        if (printWindow) {
+          printWindow.document.write(data.pdf.html);
+          printWindow.document.close();
+
+          // Wait for content to load then trigger print dialog
+          printWindow.onload = () => {
+            printWindow.focus();
+            setTimeout(() => {
+              printWindow.print();
+              toast.success("PDF print dialog opened!");
+            }, 250);
+          };
+        } else {
+          // Fallback: Create a downloadable HTML file
+          const blob = new Blob([data.pdf.html], { type: "text/html" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${business.business_name.replace(
+            /\s+/g,
+            "_"
+          )}_Brand_Report_${new Date().toISOString().split("T")[0]}.html`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          toast.success(
+            "Report downloaded as HTML. Open and print to save as PDF."
+          );
+        }
+      } else {
+        toast.error("Failed to generate PDF report.");
+      }
+    } catch (error) {
+      console.error("Failed to download report:", error);
+      toast.error("Unable to download PDF. Please try again.");
+    }
   };
 
   const handleShareReport = () => {
     try {
       if (navigator.clipboard && window.location.href) {
         navigator.clipboard.writeText(window.location.href);
-        toast.success('Report link copied to clipboard!');
+        toast.success("Report link copied to clipboard!");
       } else {
-        toast.error('Unable to copy link. Please copy the URL manually.');
+        toast.error("Unable to copy link. Please copy the URL manually.");
       }
     } catch (error) {
-      console.error('Failed to copy link:', error);
-      toast.error('Unable to copy link. Please copy the URL manually.');
+      console.error("Failed to copy link:", error);
+      toast.error("Unable to copy link. Please copy the URL manually.");
     }
   };
 
@@ -448,8 +607,10 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Report Not Found</h1>
-          <Button onClick={() => navigate('/setup')}>Start New Analysis</Button>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Report Not Found
+          </h1>
+          <Button onClick={() => navigate("/setup")}>Start New Analysis</Button>
         </div>
       </div>
     );
@@ -461,7 +622,7 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
           <div className="flex items-center gap-4 flex-wrap">
-            <BusinessSelector 
+            <BusinessSelector
               currentBusinessId={currentBusinessId || undefined}
               onBusinessChange={(newBusinessId: string) => {
                 setCurrentBusinessId(newBusinessId);
@@ -473,16 +634,25 @@ const Dashboard = () => {
                 Brand Equity Report
               </h1>
               <p className="text-xl text-gray-600">
-                {business.business_name} • Generated on {new Date(report.created_at).toLocaleDateString()}
+                {business.business_name} • Generated on{" "}
+                {new Date(report.created_at).toLocaleDateString()}
               </p>
             </div>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={handleShareReport} className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleShareReport}
+              className="flex items-center gap-2"
+            >
               <Share className="h-4 w-4" />
               Share
             </Button>
-            <Button variant="outline" onClick={handleDownloadReport} className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleDownloadReport}
+              className="flex items-center gap-2"
+            >
               <Download className="h-4 w-4" />
               Download PDF
             </Button>
@@ -490,14 +660,16 @@ const Dashboard = () => {
         </div>
 
         {/* Data Source Notice (Perplexity mode) */}
-        {report.data_quality && report.data_quality.real_data_percentage < 100 && (
-          <Alert className="mb-8 border-l-4 border-l-blue-500 bg-blue-50">
-            <AlertTriangle className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
-              Using AI‑sourced public signals where live sources aren’t connected. You can proceed without connecting anything.
-            </AlertDescription>
-          </Alert>
-        )}
+        {report.data_quality &&
+          report.data_quality.real_data_percentage < 100 && (
+            <Alert className="mb-8 border-l-4 border-l-blue-500 bg-blue-50">
+              <AlertTriangle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                Using AI‑sourced public signals where live sources aren’t
+                connected. You can proceed without connecting anything.
+              </AlertDescription>
+            </Alert>
+          )}
 
         {/* Overall Score */}
         <Card className="shadow-xl border-0 mb-8 bg-gradient-to-r from-white to-gray-50">
@@ -506,7 +678,9 @@ const Dashboard = () => {
               <div className="flex items-center gap-6 mb-6 lg:mb-0">
                 <div className="w-24 h-24 bg-gradient-to-br from-brand-500 to-brand-600 rounded-full flex items-center justify-center text-white">
                   <div className="text-center">
-                    <div className="text-3xl font-bold">{report?.overall_score || 0}</div>
+                    <div className="text-3xl font-bold">
+                      {report?.overall_score || 0}
+                    </div>
                     <div className="text-xs">/ 100</div>
                   </div>
                 </div>
@@ -515,7 +689,12 @@ const Dashboard = () => {
                     Overall Brand Equity Score
                   </h2>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className={`${getOverallScoreColor(report?.overall_score || 0)} bg-transparent border`}>
+                    <Badge
+                      variant="secondary"
+                      className={`${getOverallScoreColor(
+                        report?.overall_score || 0
+                      )} bg-transparent border`}
+                    >
                       {getOverallScoreLabel(report?.overall_score || 0)}
                     </Badge>
                     <div className="flex items-center gap-1">
@@ -524,8 +703,8 @@ const Dashboard = () => {
                           key={i}
                           className={`h-4 w-4 ${
                             i < Math.floor((report?.overall_score || 0) / 20)
-                              ? 'text-yellow-400 fill-current'
-                              : 'text-gray-300'
+                              ? "text-yellow-400 fill-current"
+                              : "text-gray-300"
                           }`}
                         />
                       ))}
@@ -535,7 +714,11 @@ const Dashboard = () => {
               </div>
               <div className="text-center lg:text-right">
                 <p className="text-gray-600 mb-4">
-                  Your brand is performing {(report?.overall_score || 0) >= 70 ? 'well' : 'below average'} compared to industry benchmarks
+                  Your brand is performing{" "}
+                  {(report?.overall_score || 0) >= 70
+                    ? "well"
+                    : "below average"}{" "}
+                  compared to industry benchmarks
                 </p>
                 <Button
                   onClick={handleBookConsultation}
@@ -624,7 +807,10 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex justify-center">
-                  <BrandScoreChart score={report?.overall_score || 0} size={250} />
+                  <BrandScoreChart
+                    score={report?.overall_score || 0}
+                    size={250}
+                  />
                 </CardContent>
               </Card>
 
@@ -639,16 +825,45 @@ const Dashboard = () => {
                 <CardContent>
                   <ScoreBreakdownChart
                     data={[
-                      { name: 'Website', score: Number(report?.website_score ?? 0), maxScore: 100 },
-                      { name: 'Social', score: Number(report?.social_score ?? 0), maxScore: 100 },
-                      { name: 'Reputation', score: Number(report?.reputation_score ?? 0), maxScore: 100 },
-                      { name: 'Visibility', score: Number(report?.visibility_score ?? 0), maxScore: 100 },
-                      { name: 'Consistency', score: Number(report?.consistency_score ?? 0), maxScore: 100 },
-                      { name: 'Positioning', score: Number(report?.positioning_score ?? 0), maxScore: 100 },
+                      {
+                        name: "Website",
+                        score: Number(report?.website_score ?? 0),
+                        maxScore: 100,
+                      },
+                      {
+                        name: "Social",
+                        score: Number(report?.social_score ?? 0),
+                        maxScore: 100,
+                      },
+                      {
+                        name: "Reputation",
+                        score: Number(report?.reputation_score ?? 0),
+                        maxScore: 100,
+                      },
+                      {
+                        name: "Visibility",
+                        score: Number(report?.visibility_score ?? 0),
+                        maxScore: 100,
+                      },
+                      {
+                        name: "Consistency",
+                        score: Number(report?.consistency_score ?? 0),
+                        maxScore: 100,
+                      },
+                      {
+                        name: "Positioning",
+                        score: Number(report?.positioning_score ?? 0),
+                        maxScore: 100,
+                      },
                     ]}
                   />
-                  {(report?.website_score ?? 0) === 0 || (report?.social_score ?? 0) === 0 || (report?.reputation_score ?? 0) === 0 ? (
-                    <p className="mt-3 text-xs text-gray-600">Tip: Values may be AI‑sourced where live data isn’t available yet.</p>
+                  {(report?.website_score ?? 0) === 0 ||
+                  (report?.social_score ?? 0) === 0 ||
+                  (report?.reputation_score ?? 0) === 0 ? (
+                    <p className="mt-3 text-xs text-gray-600">
+                      Tip: Values may be AI‑sourced where live data isn’t
+                      available yet.
+                    </p>
                   ) : null}
                 </CardContent>
               </Card>
@@ -666,8 +881,9 @@ const Dashboard = () => {
                 <TrendChart title="6-Month Brand Score Progression" />
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                   <p className="text-sm text-blue-800">
-                    <strong>Insight:</strong> Your brand score has improved by 13 points over the last 6 months, 
-                    showing consistent growth in digital presence and customer engagement.
+                    <strong>Insight:</strong> Your brand score has improved by
+                    13 points over the last 6 months, showing consistent growth
+                    in digital presence and customer engagement.
                   </p>
                 </div>
               </CardContent>
@@ -687,31 +903,45 @@ const Dashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Your Brand Score</span>
+                    <span className="text-sm font-medium">
+                      Your Brand Score
+                    </span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${(report?.overall_score || 0)}%` }}
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{ width: `${report?.overall_score || 0}%` }}
                         ></div>
                       </div>
-                      <span className="text-sm font-bold">{report?.overall_score || 0}</span>
+                      <span className="text-sm font-bold">
+                        {report?.overall_score || 0}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Industry Average</span>
+                    <span className="text-sm font-medium">
+                      Industry Average
+                    </span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div className="bg-gray-500 h-2 rounded-full" style={{ width: '62%' }}></div>
+                        <div
+                          className="bg-gray-500 h-2 rounded-full"
+                          style={{ width: "62%" }}
+                        ></div>
                       </div>
                       <span className="text-sm font-bold">62</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Top 10% Benchmark</span>
+                    <span className="text-sm font-medium">
+                      Top 10% Benchmark
+                    </span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                        <div
+                          className="bg-green-600 h-2 rounded-full"
+                          style={{ width: "85%" }}
+                        ></div>
                       </div>
                       <span className="text-sm font-bold">85</span>
                     </div>
@@ -719,8 +949,11 @@ const Dashboard = () => {
                 </div>
                 <div className="mt-4 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
                   <p className="text-sm text-green-800">
-                    <strong>Great news!</strong> Your brand score is {((report?.overall_score || 0) - 62)} points above 
-                    the industry average, putting you in the top {report?.overall_score >= 80 ? '20%' : '30%'} of businesses in your sector.
+                    <strong>Great news!</strong> Your brand score is{" "}
+                    {(report?.overall_score || 0) - 62} points above the
+                    industry average, putting you in the top{" "}
+                    {report?.overall_score >= 80 ? "20%" : "30%"} of businesses
+                    in your sector.
                   </p>
                 </div>
               </CardContent>
@@ -729,15 +962,22 @@ const Dashboard = () => {
 
           <TabsContent value="reviews" className="space-y-6">
             {/* Check if APIs are configured */}
-            {!report.analysis_data?.googleReviews && !report.analysis_data?.trustpilotReviews && !report.analysis_data?.competitors && (
-              <Alert className="mb-8 border-l-4 border-l-yellow-500 bg-yellow-50">
-                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                <AlertDescription className="text-yellow-800">
-                  <strong>Reviews & Competitor Data Not Yet Available:</strong> The Review APIs need to be deployed to Supabase with proper credentials.
-                  See <strong>EDGE_FUNCTIONS_SETUP.md</strong> for deployment instructions. For now, other metrics are available in the Key Insights tab.
-                </AlertDescription>
-              </Alert>
-            )}
+            {!report.analysis_data?.googleReviews &&
+              !report.analysis_data?.trustpilotReviews &&
+              !report.analysis_data?.competitors && (
+                <Alert className="mb-8 border-l-4 border-l-yellow-500 bg-yellow-50">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">
+                    <strong>
+                      Reviews & Competitor Data Not Yet Available:
+                    </strong>{" "}
+                    The Review APIs need to be deployed to Supabase with proper
+                    credentials. See <strong>EDGE_FUNCTIONS_SETUP.md</strong>{" "}
+                    for deployment instructions. For now, other metrics are
+                    available in the Key Insights tab.
+                  </AlertDescription>
+                </Alert>
+              )}
 
             {/* Google Reviews */}
             {report.analysis_data?.googleReviews && (
@@ -756,11 +996,15 @@ const Dashboard = () => {
                     <>
                       <div className="flex items-center gap-4">
                         <div className="text-4xl font-bold text-yellow-600">
-                          {report.analysis_data.googleReviews.rating?.toFixed(1)}
+                          {report.analysis_data.googleReviews.rating?.toFixed(
+                            1
+                          )}
                         </div>
                         <div>
                           <div className="text-sm text-gray-600">
-                            {report.analysis_data.googleReviews.totalReviews || 0} reviews
+                            {report.analysis_data.googleReviews.totalReviews ||
+                              0}{" "}
+                            reviews
                           </div>
                           {report.analysis_data.googleReviews.address && (
                             <div className="text-xs text-gray-500 mt-1">
@@ -769,27 +1013,44 @@ const Dashboard = () => {
                           )}
                         </div>
                       </div>
-                      {report.analysis_data.googleReviews.reviews && report.analysis_data.googleReviews.reviews.length > 0 && (
-                        <div className="mt-4 space-y-3">
-                          <h4 className="font-semibold text-sm">Recent Reviews</h4>
-                          {report.analysis_data.googleReviews.reviews.slice(0, 2).map((review: any, idx: number) => (
-                            <div key={idx} className="p-3 bg-gray-50 rounded-lg">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="flex gap-0.5">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star
-                                      key={i}
-                                      className={`h-3 w-3 ${i < (review.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                                    />
-                                  ))}
+                      {report.analysis_data.googleReviews.reviews &&
+                        report.analysis_data.googleReviews.reviews.length >
+                          0 && (
+                          <div className="mt-4 space-y-3">
+                            <h4 className="font-semibold text-sm">
+                              Recent Reviews
+                            </h4>
+                            {report.analysis_data.googleReviews.reviews
+                              .slice(0, 2)
+                              .map((review: any, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="p-3 bg-gray-50 rounded-lg"
+                                >
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <div className="flex gap-0.5">
+                                      {[...Array(5)].map((_, i) => (
+                                        <Star
+                                          key={i}
+                                          className={`h-3 w-3 ${
+                                            i < (review.rating || 0)
+                                              ? "fill-yellow-400 text-yellow-400"
+                                              : "text-gray-300"
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {review.author}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-700">
+                                    {review.text?.substring(0, 150)}
+                                  </p>
                                 </div>
-                                <span className="text-xs text-gray-500">{review.author}</span>
-                              </div>
-                              <p className="text-sm text-gray-700">{review.text?.substring(0, 150)}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                              ))}
+                          </div>
+                        )}
                     </>
                   ) : (
                     <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
@@ -976,14 +1237,12 @@ const Dashboard = () => {
               //     )}
               //   </CardContent>
               // </Card>
-              <>
-              </>
+              <></>
             )}
 
             {/* Loading Skeleton for Trustpilot */}
             {!report.analysis_data?.trustpilotReviews && (
-              <>
-              </>
+              <></>
               // <Card className="border-0 shadow-md overflow-hidden">
               //   <div className="bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-4">
               //     <div className="flex items-center gap-3">
@@ -1001,7 +1260,6 @@ const Dashboard = () => {
               //   </CardContent>
               // </Card>
             )}
-
           </TabsContent>
 
           <TabsContent value="competitors" className="space-y-6">
@@ -1014,23 +1272,44 @@ const Dashboard = () => {
                     Competitor Analysis
                   </CardTitle>
                   <CardDescription>
-                    {report.analysis_data.competitors.searchedBusiness?.name ? `Top competitors for ${report.analysis_data.competitors.searchedBusiness.name}` : 'Top competitors in your market'}
+                    {report.analysis_data.competitors.searchedBusiness?.name
+                      ? `Top competitors for ${report.analysis_data.competitors.searchedBusiness.name}`
+                      : "Top competitors in your market"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {report.analysis_data.competitors?.competitors && report.analysis_data.competitors.competitors.length > 0 ? (
+                  {report.analysis_data.competitors?.competitors &&
+                  report.analysis_data.competitors.competitors.length > 0 ? (
                     <div className="space-y-4">
                       {/* Summary Stats */}
                       <div className="grid grid-cols-2 gap-3 mb-4 pb-4 border-b">
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-purple-600">{report.analysis_data.competitors?.totalCompetitors || report.analysis_data.competitors.competitors?.length || 0}</p>
-                          <p className="text-xs text-gray-600">Competitors Found</p>
+                          <p className="text-2xl font-bold text-purple-600">
+                            {report.analysis_data.competitors
+                              ?.totalCompetitors ||
+                              report.analysis_data.competitors.competitors
+                                ?.length ||
+                              0}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            Competitors Found
+                          </p>
                         </div>
                         <div className="text-center">
                           <p className="text-lg font-semibold text-gray-700">
-                            {report.analysis_data.competitors?.competitors && report.analysis_data.competitors.competitors.length > 0
-                              ? (report.analysis_data.competitors.competitors.reduce((sum: number, c: any) => sum + (c.googleRating || c.rating || 0), 0) / report.analysis_data.competitors.competitors.length).toFixed(1)
-                              : '0'}
+                            {report.analysis_data.competitors?.competitors &&
+                            report.analysis_data.competitors.competitors
+                              .length > 0
+                              ? (
+                                  report.analysis_data.competitors.competitors.reduce(
+                                    (sum: number, c: any) =>
+                                      sum + (c.googleRating || c.rating || 0),
+                                    0
+                                  ) /
+                                  report.analysis_data.competitors.competitors
+                                    .length
+                                ).toFixed(1)
+                              : "0"}
                           </p>
                           <p className="text-xs text-gray-600">Avg Rating</p>
                         </div>
@@ -1038,86 +1317,135 @@ const Dashboard = () => {
 
                       {/* Competitor List */}
                       <div className="space-y-3">
-                        {report.analysis_data.competitors?.competitors && report.analysis_data.competitors.competitors.map((competitor: any, idx: number) => (
-                          <div key={idx} className="p-4 border rounded-lg hover:bg-purple-50 transition">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900">{competitor.name}</h4>
-                                {competitor.address && (
-                                  <p className="text-xs text-gray-500 mt-1">{competitor.address}</p>
+                        {report.analysis_data.competitors?.competitors &&
+                          report.analysis_data.competitors.competitors.map(
+                            (competitor: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="p-4 border rounded-lg hover:bg-purple-50 transition"
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-gray-900">
+                                      {competitor.name}
+                                    </h4>
+                                    {competitor.address && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {competitor.address}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {competitor.website && (
+                                    <a
+                                      href={competitor.website}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 ml-2"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </a>
+                                  )}
+                                </div>
+
+                                {/* Rating and Review Count */}
+                                <div className="flex items-center gap-3 mt-2">
+                                  <div className="flex gap-0.5">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-3 w-3 ${
+                                          i <
+                                          Math.floor(
+                                            competitor.googleRating ||
+                                              competitor.rating ||
+                                              0
+                                          )
+                                            ? "fill-yellow-400 text-yellow-400"
+                                            : "text-gray-300"
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {(
+                                      competitor.googleRating ||
+                                      competitor.rating ||
+                                      0
+                                    )?.toFixed(1)}
+                                  </span>
+                                  <span className="text-sm text-gray-600">
+                                    (
+                                    {competitor.googleReviewCount ||
+                                      competitor.reviewCount ||
+                                      0}{" "}
+                                    reviews)
+                                  </span>
+                                </div>
+
+                                {/* Reviews Section */}
+                                {competitor.reviews &&
+                                  competitor.reviews.length > 0 && (
+                                    <div className="mt-3 space-y-2">
+                                      <p className="text-xs font-semibold text-gray-700">
+                                        Reviews ({competitor.reviews.length})
+                                      </p>
+                                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {competitor.reviews.map(
+                                          (review: any, reviewIdx: number) => (
+                                            <div
+                                              key={reviewIdx}
+                                              className="p-2 bg-gray-50 rounded border border-gray-200 text-xs"
+                                            >
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <div className="flex gap-0.5">
+                                                  {[...Array(5)].map((_, i) => (
+                                                    <Star
+                                                      key={i}
+                                                      className={`h-2 w-2 ${
+                                                        i < (review.rating || 0)
+                                                          ? "fill-yellow-400 text-yellow-400"
+                                                          : "text-gray-300"
+                                                      }`}
+                                                    />
+                                                  ))}
+                                                </div>
+                                                <span className="text-gray-600 font-medium">
+                                                  {review.rating}/5
+                                                </span>
+                                              </div>
+                                              <p className="text-gray-600 line-clamp-2">
+                                                {review.text}
+                                              </p>
+                                              <p className="text-gray-500 mt-1">
+                                                — {review.author}
+                                              </p>
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                {/* Contact Info */}
+                                {competitor.phone && (
+                                  <p className="text-xs text-gray-600 mt-2">
+                                    📞 {competitor.phone}
+                                  </p>
                                 )}
                               </div>
-                              {competitor.website && (
-                                <a
-                                  href={competitor.website}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 ml-2"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
-                              )}
-                            </div>
-
-                            {/* Rating and Review Count */}
-                            <div className="flex items-center gap-3 mt-2">
-                              <div className="flex gap-0.5">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-3 w-3 ${i < Math.floor(competitor.googleRating || competitor.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                                  />
-                                ))}
-                              </div>
-                              <span className="text-sm font-medium text-gray-900">
-                                {(competitor.googleRating || competitor.rating || 0)?.toFixed(1)}
-                              </span>
-                              <span className="text-sm text-gray-600">
-                                ({competitor.googleReviewCount || competitor.reviewCount || 0} reviews)
-                              </span>
-                            </div>
-
-                            {/* Reviews Section */}
-                            {competitor.reviews && competitor.reviews.length > 0 && (
-                              <div className="mt-3 space-y-2">
-                                <p className="text-xs font-semibold text-gray-700">
-                                  Reviews ({competitor.reviews.length})
-                                </p>
-                                <div className="space-y-2 max-h-48 overflow-y-auto">
-                                  {competitor.reviews.map((review: any, reviewIdx: number) => (
-                                    <div key={reviewIdx} className="p-2 bg-gray-50 rounded border border-gray-200 text-xs">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <div className="flex gap-0.5">
-                                          {[...Array(5)].map((_, i) => (
-                                            <Star
-                                              key={i}
-                                              className={`h-2 w-2 ${i < (review.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                                            />
-                                          ))}
-                                        </div>
-                                        <span className="text-gray-600 font-medium">{review.rating}/5</span>
-                                      </div>
-                                      <p className="text-gray-600 line-clamp-2">{review.text}</p>
-                                      <p className="text-gray-500 mt-1">— {review.author}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Contact Info */}
-                            {competitor.phone && (
-                              <p className="text-xs text-gray-600 mt-2">📞 {competitor.phone}</p>
-                            )}
-                          </div>
-                        ))}
+                            )
+                          )}
                       </div>
                     </div>
                   ) : (
                     <div className="p-6 bg-gray-50 rounded-lg text-center">
-                      <p className="text-gray-600 mb-2">No competitors found for your location</p>
+                      <p className="text-gray-600 mb-2">
+                        No competitors found for your location
+                      </p>
                       {report.analysis_data.competitors.error && (
-                        <p className="text-sm text-gray-500">{report.analysis_data.competitors.error}</p>
+                        <p className="text-sm text-gray-500">
+                          {report.analysis_data.competitors.error}
+                        </p>
                       )}
                     </div>
                   )}
@@ -1133,8 +1461,12 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="p-6 bg-gray-50 rounded-lg text-center">
-                    <p className="text-gray-600 mb-2">No competitor data available yet</p>
-                    <p className="text-sm text-gray-500">Run a brand analysis scan to discover your competitors</p>
+                    <p className="text-gray-600 mb-2">
+                      No competitor data available yet
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Run a brand analysis scan to discover your competitors
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -1159,41 +1491,71 @@ const Dashboard = () => {
                     {/* Performance Score */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">Performance</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          Performance
+                        </h4>
                         <div className="flex items-center gap-3">
                           <div className="w-24 bg-gray-200 rounded-full h-3">
                             <div
                               className={`h-3 rounded-full transition-all ${
-                                (report.analysis_data.website.performance_score || 0) >= 80 ? 'bg-green-500' :
-                                (report.analysis_data.website.performance_score || 0) >= 50 ? 'bg-yellow-500' :
-                                'bg-red-500'
+                                (report.analysis_data.website
+                                  .performance_score || 0) >= 80
+                                  ? "bg-green-500"
+                                  : (report.analysis_data.website
+                                      .performance_score || 0) >= 50
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
                               }`}
-                              style={{ width: `${Math.min(report.analysis_data.website.performance_score || 0, 100)}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  report.analysis_data.website
+                                    .performance_score || 0,
+                                  100
+                                )}%`,
+                              }}
                             ></div>
                           </div>
                           <span className="text-lg font-bold text-gray-900">
-                            {report.analysis_data.website.performance_score || 0}/100
+                            {report.analysis_data.website.performance_score ||
+                              0}
+                            /100
                           </span>
                         </div>
                       </div>
                       <p className="text-xs text-gray-600">
-                        Loading Time: {report.analysis_data.website.loadingTime?.desktop ? `${report.analysis_data.website.loadingTime.desktop.toFixed(2)}s` : 'N/A'}
+                        Loading Time:{" "}
+                        {report.analysis_data.website.loadingTime?.desktop
+                          ? `${report.analysis_data.website.loadingTime.desktop.toFixed(
+                              2
+                            )}s`
+                          : "N/A"}
                       </p>
                     </div>
 
                     {/* SEO Score */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">SEO Optimization</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          SEO Optimization
+                        </h4>
                         <div className="flex items-center gap-3">
                           <div className="w-24 bg-gray-200 rounded-full h-3">
                             <div
                               className={`h-3 rounded-full transition-all ${
-                                (report.analysis_data.website.seo_score || 0) >= 80 ? 'bg-green-500' :
-                                (report.analysis_data.website.seo_score || 0) >= 50 ? 'bg-yellow-500' :
-                                'bg-red-500'
+                                (report.analysis_data.website.seo_score || 0) >=
+                                80
+                                  ? "bg-green-500"
+                                  : (report.analysis_data.website.seo_score ||
+                                      0) >= 50
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
                               }`}
-                              style={{ width: `${Math.min(report.analysis_data.website.seo_score || 0, 100)}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  report.analysis_data.website.seo_score || 0,
+                                  100
+                                )}%`,
+                              }}
                             ></div>
                           </div>
                           <span className="text-lg font-bold text-gray-900">
@@ -1209,20 +1571,33 @@ const Dashboard = () => {
                     {/* Accessibility Score */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">Accessibility</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          Accessibility
+                        </h4>
                         <div className="flex items-center gap-3">
                           <div className="w-24 bg-gray-200 rounded-full h-3">
                             <div
                               className={`h-3 rounded-full transition-all ${
-                                (report.analysis_data.website.accessibility || 0) >= 80 ? 'bg-green-500' :
-                                (report.analysis_data.website.accessibility || 0) >= 50 ? 'bg-yellow-500' :
-                                'bg-red-500'
+                                (report.analysis_data.website.accessibility ||
+                                  0) >= 80
+                                  ? "bg-green-500"
+                                  : (report.analysis_data.website
+                                      .accessibility || 0) >= 50
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
                               }`}
-                              style={{ width: `${Math.min(report.analysis_data.website.accessibility || 0, 100)}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  report.analysis_data.website.accessibility ||
+                                    0,
+                                  100
+                                )}%`,
+                              }}
                             ></div>
                           </div>
                           <span className="text-lg font-bold text-gray-900">
-                            {report.analysis_data.website.accessibility || 0}/100
+                            {report.analysis_data.website.accessibility || 0}
+                            /100
                           </span>
                         </div>
                       </div>
@@ -1234,45 +1609,72 @@ const Dashboard = () => {
                     {/* Best Practices Score */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">Best Practices</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          Best Practices
+                        </h4>
                         <div className="flex items-center gap-3">
                           <div className="w-24 bg-gray-200 rounded-full h-3">
                             <div
                               className={`h-3 rounded-full transition-all ${
-                                (report.analysis_data.website.bestPractices || 0) >= 80 ? 'bg-green-500' :
-                                (report.analysis_data.website.bestPractices || 0) >= 50 ? 'bg-yellow-500' :
-                                'bg-red-500'
+                                (report.analysis_data.website.bestPractices ||
+                                  0) >= 80
+                                  ? "bg-green-500"
+                                  : (report.analysis_data.website
+                                      .bestPractices || 0) >= 50
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
                               }`}
-                              style={{ width: `${Math.min(report.analysis_data.website.bestPractices || 0, 100)}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  report.analysis_data.website.bestPractices ||
+                                    0,
+                                  100
+                                )}%`,
+                              }}
                             ></div>
                           </div>
                           <span className="text-lg font-bold text-gray-900">
-                            {report.analysis_data.website.bestPractices || 0}/100
+                            {report.analysis_data.website.bestPractices || 0}
+                            /100
                           </span>
                         </div>
                       </div>
                       <p className="text-xs text-gray-600">
-                        Web standards, security, and modern development practices
+                        Web standards, security, and modern development
+                        practices
                       </p>
                     </div>
 
                     {/* Content Quality */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">Content Quality</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          Content Quality
+                        </h4>
                         <div className="flex items-center gap-3">
                           <div className="w-24 bg-gray-200 rounded-full h-3">
                             <div
                               className={`h-3 rounded-full transition-all ${
-                                (report.analysis_data.website.content_quality || 0) >= 80 ? 'bg-green-500' :
-                                (report.analysis_data.website.content_quality || 0) >= 50 ? 'bg-yellow-500' :
-                                'bg-red-500'
+                                (report.analysis_data.website.content_quality ||
+                                  0) >= 80
+                                  ? "bg-green-500"
+                                  : (report.analysis_data.website
+                                      .content_quality || 0) >= 50
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
                               }`}
-                              style={{ width: `${Math.min(report.analysis_data.website.content_quality || 0, 100)}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  report.analysis_data.website
+                                    .content_quality || 0,
+                                  100
+                                )}%`,
+                              }}
                             ></div>
                           </div>
                           <span className="text-lg font-bold text-gray-900">
-                            {report.analysis_data.website.content_quality || 0}/100
+                            {report.analysis_data.website.content_quality || 0}
+                            /100
                           </span>
                         </div>
                       </div>
@@ -1283,11 +1685,27 @@ const Dashboard = () => {
 
                     {/* Key Findings */}
                     <div className="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                      <p className="text-sm text-blue-900 font-medium mb-2">Key Findings:</p>
+                      <p className="text-sm text-blue-900 font-medium mb-2">
+                        Key Findings:
+                      </p>
                       <ul className="text-xs text-blue-800 space-y-1">
-                        <li>• Desktop and mobile performance scores are tracked separately</li>
-                        <li>• {(report.analysis_data.website.seo_score || 0) >= 80 ? 'Your SEO is well-optimized' : 'Consider improving your SEO optimization'}</li>
-                        <li>• {(report.analysis_data.website.accessibility || 0) >= 80 ? 'Great accessibility compliance' : 'Accessibility improvements needed'}</li>
+                        <li>
+                          • Desktop and mobile performance scores are tracked
+                          separately
+                        </li>
+                        <li>
+                          •{" "}
+                          {(report.analysis_data.website.seo_score || 0) >= 80
+                            ? "Your SEO is well-optimized"
+                            : "Consider improving your SEO optimization"}
+                        </li>
+                        <li>
+                          •{" "}
+                          {(report.analysis_data.website.accessibility || 0) >=
+                          80
+                            ? "Great accessibility compliance"
+                            : "Accessibility improvements needed"}
+                        </li>
                       </ul>
                     </div>
                   </div>
@@ -1312,16 +1730,28 @@ const Dashboard = () => {
                     {/* Domain Authority */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">Domain Authority</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          Domain Authority
+                        </h4>
                         <div className="flex items-center gap-3">
                           <div className="w-24 bg-gray-200 rounded-full h-3">
                             <div
                               className={`h-3 rounded-full transition-all ${
-                                (report.analysis_data.seo.domain_authority || 0) >= 50 ? 'bg-green-500' :
-                                (report.analysis_data.seo.domain_authority || 0) >= 30 ? 'bg-yellow-500' :
-                                'bg-red-500'
+                                (report.analysis_data.seo.domain_authority ||
+                                  0) >= 50
+                                  ? "bg-green-500"
+                                  : (report.analysis_data.seo
+                                      .domain_authority || 0) >= 30
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
                               }`}
-                              style={{ width: `${Math.min((report.analysis_data.seo.domain_authority || 0) * 2, 100)}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  (report.analysis_data.seo.domain_authority ||
+                                    0) * 2,
+                                  100
+                                )}%`,
+                              }}
                             ></div>
                           </div>
                           <span className="text-lg font-bold text-gray-900">
@@ -1337,22 +1767,29 @@ const Dashboard = () => {
                     {/* Organic Keywords */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">Organic Keywords Ranking</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          Organic Keywords Ranking
+                        </h4>
                         <span className="text-lg font-bold text-gray-900">
-                          {report.analysis_data.seo.organic_keywords?.toLocaleString() || 0}
+                          {report.analysis_data.seo.organic_keywords?.toLocaleString() ||
+                            0}
                         </span>
                       </div>
                       <p className="text-xs text-gray-600">
-                        Number of keywords your domain ranks for in search results
+                        Number of keywords your domain ranks for in search
+                        results
                       </p>
                     </div>
 
                     {/* Organic Traffic */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">Estimated Monthly Organic Traffic</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          Estimated Monthly Organic Traffic
+                        </h4>
                         <span className="text-lg font-bold text-gray-900">
-                          {report.analysis_data.seo.organic_traffic?.toLocaleString() || 0}
+                          {report.analysis_data.seo.organic_traffic?.toLocaleString() ||
+                            0}
                         </span>
                       </div>
                       <p className="text-xs text-gray-600">
@@ -1363,9 +1800,12 @@ const Dashboard = () => {
                     {/* Backlinks */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">Total Backlinks</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          Total Backlinks
+                        </h4>
                         <span className="text-lg font-bold text-gray-900">
-                          {report.analysis_data.seo.backlinks_count?.toLocaleString() || 0}
+                          {report.analysis_data.seo.backlinks_count?.toLocaleString() ||
+                            0}
                         </span>
                       </div>
                       <p className="text-xs text-gray-600">
@@ -1376,9 +1816,12 @@ const Dashboard = () => {
                     {/* Referring Domains */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">Referring Domains</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          Referring Domains
+                        </h4>
                         <span className="text-lg font-bold text-gray-900">
-                          {report.analysis_data.seo.referring_domains?.toLocaleString() || 0}
+                          {report.analysis_data.seo.referring_domains?.toLocaleString() ||
+                            0}
                         </span>
                       </div>
                       <p className="text-xs text-gray-600">
@@ -1389,16 +1832,28 @@ const Dashboard = () => {
                     {/* SEO Health Score */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">SEO Health Score</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          SEO Health Score
+                        </h4>
                         <div className="flex items-center gap-3">
                           <div className="w-24 bg-gray-200 rounded-full h-3">
                             <div
                               className={`h-3 rounded-full transition-all ${
-                                (report.analysis_data.seo.seo_health_score || 0) >= 80 ? 'bg-green-500' :
-                                (report.analysis_data.seo.seo_health_score || 0) >= 50 ? 'bg-yellow-500' :
-                                'bg-red-500'
+                                (report.analysis_data.seo.seo_health_score ||
+                                  0) >= 80
+                                  ? "bg-green-500"
+                                  : (report.analysis_data.seo
+                                      .seo_health_score || 0) >= 50
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
                               }`}
-                              style={{ width: `${Math.min(report.analysis_data.seo.seo_health_score || 0, 100)}%` }}
+                              style={{
+                                width: `${Math.min(
+                                  report.analysis_data.seo.seo_health_score ||
+                                    0,
+                                  100
+                                )}%`,
+                              }}
                             ></div>
                           </div>
                           <span className="text-lg font-bold text-gray-900">
@@ -1413,11 +1868,31 @@ const Dashboard = () => {
 
                     {/* Key Findings */}
                     <div className="mt-6 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                      <p className="text-sm text-green-900 font-medium mb-2">SEO Insights:</p>
+                      <p className="text-sm text-green-900 font-medium mb-2">
+                        SEO Insights:
+                      </p>
                       <ul className="text-xs text-green-800 space-y-1">
-                        <li>• Domain Authority: {(report.analysis_data.seo.domain_authority || 0) >= 50 ? 'Strong domain authority' : 'Room for improvement in domain authority'}</li>
-                        <li>• Organic Visibility: {(report.analysis_data.seo.organic_keywords || 0) > 100 ? 'Good keyword visibility' : 'Consider expanding keyword targeting'}</li>
-                        <li>• Backlink Profile: {(report.analysis_data.seo.referring_domains || 0) > 50 ? 'Strong backlink profile' : 'Build more high-quality backlinks'}</li>
+                        <li>
+                          • Domain Authority:{" "}
+                          {(report.analysis_data.seo.domain_authority || 0) >=
+                          50
+                            ? "Strong domain authority"
+                            : "Room for improvement in domain authority"}
+                        </li>
+                        <li>
+                          • Organic Visibility:{" "}
+                          {(report.analysis_data.seo.organic_keywords || 0) >
+                          100
+                            ? "Good keyword visibility"
+                            : "Consider expanding keyword targeting"}
+                        </li>
+                        <li>
+                          • Backlink Profile:{" "}
+                          {(report.analysis_data.seo.referring_domains || 0) >
+                          50
+                            ? "Strong backlink profile"
+                            : "Build more high-quality backlinks"}
+                        </li>
                       </ul>
                     </div>
                   </div>
@@ -1449,54 +1924,84 @@ const Dashboard = () => {
                       <CheckCircle className="h-5 w-5 text-green-600" />
                       Strengths
                     </CardTitle>
-                    <CardDescription>What your brand is doing well</CardDescription>
+                    <CardDescription>
+                      What your brand is doing well
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {/* Collect all strengths from breakdowns */}
-                    {report.score_breakdowns?.website?.strengths?.map((strength: string, idx: number) => (
-                      <div key={`web-${idx}`} className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
-                        <div className="flex-1">
-                          <p className="text-sm">{strength}</p>
+                    {report.score_breakdowns?.website?.strengths?.map(
+                      (strength: string, idx: number) => (
+                        <div
+                          key={`web-${idx}`}
+                          className="flex items-start gap-3"
+                        >
+                          <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <p className="text-sm">{strength}</p>
+                          </div>
+                          {report.data_quality?.website_api && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start"
+                            >
+                              Live Data
+                            </Badge>
+                          )}
                         </div>
-                        {report.data_quality?.website_api && (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start">
-                            Live Data
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                    {report.score_breakdowns?.social?.strengths?.map((strength: string, idx: number) => (
-                      <div key={`social-${idx}`} className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
-                        <div className="flex-1">
-                          <p className="text-sm">{strength}</p>
-                        </div>
-                        {report.data_quality?.social_api && (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start">
-                            Live Data
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                    {report.score_breakdowns?.reputation?.strengths?.map((strength: string, idx: number) => (
-                      <div key={`rep-${idx}`} className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
-                        <div className="flex-1">
-                          <p className="text-sm">{strength}</p>
-                        </div>
-                        {report.data_quality?.reputation_api && (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start">
-                            Live Data
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                    {!report.score_breakdowns?.website?.strengths?.length && 
-                     !report.score_breakdowns?.social?.strengths?.length && 
-                     !report.score_breakdowns?.reputation?.strengths?.length && (
-                      <p className="text-sm text-gray-500">No strengths data available yet. Run a new analysis to get insights.</p>
+                      )
                     )}
+                    {report.score_breakdowns?.social?.strengths?.map(
+                      (strength: string, idx: number) => (
+                        <div
+                          key={`social-${idx}`}
+                          className="flex items-start gap-3"
+                        >
+                          <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <p className="text-sm">{strength}</p>
+                          </div>
+                          {report.data_quality?.social_api && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start"
+                            >
+                              Live Data
+                            </Badge>
+                          )}
+                        </div>
+                      )
+                    )}
+                    {report.score_breakdowns?.reputation?.strengths?.map(
+                      (strength: string, idx: number) => (
+                        <div
+                          key={`rep-${idx}`}
+                          className="flex items-start gap-3"
+                        >
+                          <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <p className="text-sm">{strength}</p>
+                          </div>
+                          {report.data_quality?.reputation_api && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start"
+                            >
+                              Live Data
+                            </Badge>
+                          )}
+                        </div>
+                      )
+                    )}
+                    {!report.score_breakdowns?.website?.strengths?.length &&
+                      !report.score_breakdowns?.social?.strengths?.length &&
+                      !report.score_breakdowns?.reputation?.strengths
+                        ?.length && (
+                        <p className="text-sm text-gray-500">
+                          No strengths data available yet. Run a new analysis to
+                          get insights.
+                        </p>
+                      )}
                   </CardContent>
                 </Card>
 
@@ -1506,54 +2011,83 @@ const Dashboard = () => {
                       <AlertTriangle className="h-5 w-5 text-yellow-600" />
                       Areas for Improvement
                     </CardTitle>
-                    <CardDescription>Opportunities to strengthen your brand</CardDescription>
+                    <CardDescription>
+                      Opportunities to strengthen your brand
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {/* Collect all weaknesses from breakdowns */}
-                    {report.score_breakdowns?.website?.weaknesses?.map((weakness: string, idx: number) => (
-                      <div key={`web-${idx}`} className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-yellow-600 rounded-full mt-2"></div>
-                        <div className="flex-1">
-                          <p className="text-sm">{weakness}</p>
+                    {report.score_breakdowns?.website?.weaknesses?.map(
+                      (weakness: string, idx: number) => (
+                        <div
+                          key={`web-${idx}`}
+                          className="flex items-start gap-3"
+                        >
+                          <div className="w-2 h-2 bg-yellow-600 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <p className="text-sm">{weakness}</p>
+                          </div>
+                          {report.data_quality?.website_api && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start"
+                            >
+                              Live Data
+                            </Badge>
+                          )}
                         </div>
-                        {report.data_quality?.website_api && (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start">
-                            Live Data
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                    {report.score_breakdowns?.social?.weaknesses?.map((weakness: string, idx: number) => (
-                      <div key={`social-${idx}`} className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-yellow-600 rounded-full mt-2"></div>
-                        <div className="flex-1">
-                          <p className="text-sm">{weakness}</p>
-                        </div>
-                        {report.data_quality?.social_api && (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start">
-                            Live Data
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                    {report.score_breakdowns?.reputation?.weaknesses?.map((weakness: string, idx: number) => (
-                      <div key={`rep-${idx}`} className="flex items-start gap-3">
-                        <div className="w-2 h-2 bg-yellow-600 rounded-full mt-2"></div>
-                        <div className="flex-1">
-                          <p className="text-sm">{weakness}</p>
-                        </div>
-                        {report.data_quality?.reputation_api && (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start">
-                            Live Data
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                    {!report.score_breakdowns?.website?.weaknesses?.length && 
-                     !report.score_breakdowns?.social?.weaknesses?.length && 
-                     !report.score_breakdowns?.reputation?.weaknesses?.length && (
-                      <p className="text-sm text-gray-500">No improvement areas identified. Great job!</p>
+                      )
                     )}
+                    {report.score_breakdowns?.social?.weaknesses?.map(
+                      (weakness: string, idx: number) => (
+                        <div
+                          key={`social-${idx}`}
+                          className="flex items-start gap-3"
+                        >
+                          <div className="w-2 h-2 bg-yellow-600 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <p className="text-sm">{weakness}</p>
+                          </div>
+                          {report.data_quality?.social_api && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start"
+                            >
+                              Live Data
+                            </Badge>
+                          )}
+                        </div>
+                      )
+                    )}
+                    {report.score_breakdowns?.reputation?.weaknesses?.map(
+                      (weakness: string, idx: number) => (
+                        <div
+                          key={`rep-${idx}`}
+                          className="flex items-start gap-3"
+                        >
+                          <div className="w-2 h-2 bg-yellow-600 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <p className="text-sm">{weakness}</p>
+                          </div>
+                          {report.data_quality?.reputation_api && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-green-100 text-green-700 border-green-200 ml-auto self-start"
+                            >
+                              Live Data
+                            </Badge>
+                          )}
+                        </div>
+                      )
+                    )}
+                    {!report.score_breakdowns?.website?.weaknesses?.length &&
+                      !report.score_breakdowns?.social?.weaknesses?.length &&
+                      !report.score_breakdowns?.reputation?.weaknesses
+                        ?.length && (
+                        <p className="text-sm text-gray-500">
+                          No improvement areas identified. Great job!
+                        </p>
+                      )}
                   </CardContent>
                 </Card>
               </div>
@@ -1562,41 +2096,71 @@ const Dashboard = () => {
 
           <TabsContent value="recommendations" className="space-y-4">
             {(() => {
-              const recs: any[] = Array.isArray(report?.recommendations) ? report!.recommendations : []
+              const recs: any[] = Array.isArray(report?.recommendations)
+                ? report!.recommendations
+                : [];
               const isConnecty = (text?: string) =>
-                typeof text === 'string' && /connect\s+.*api|connect\s+api|connect\s+apis|missing\s+apis/i.test(text)
+                typeof text === "string" &&
+                /connect\s+.*api|connect\s+api|connect\s+apis|missing\s+apis/i.test(
+                  text
+                );
               const filtered = recs.filter((rec: any) => {
-                if (!rec) return false
-                if (isConnecty(rec?.category) || isConnecty(rec?.action) || isConnecty(rec?.impact)) return false
+                if (!rec) return false;
+                if (
+                  isConnecty(rec?.category) ||
+                  isConnecty(rec?.action) ||
+                  isConnecty(rec?.impact)
+                )
+                  return false;
                 if (Array.isArray(rec?.specific_tasks)) {
-                  if (rec.specific_tasks.some((t: string) => isConnecty(t))) return false
+                  if (rec.specific_tasks.some((t: string) => isConnecty(t)))
+                    return false;
                 }
-                return true
-              })
+                return true;
+              });
               return filtered.length > 0 ? (
                 filtered.map((rec: any, index: number) => (
                   <Card key={index}>
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <Badge variant={rec.priority === 'High' ? 'destructive' : 'secondary'}>
-                            {rec.priority || 'Medium'} Priority
+                          <Badge
+                            variant={
+                              rec.priority === "High"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {rec.priority || "Medium"} Priority
                           </Badge>
-                          <span className="font-semibold">{rec.category || 'General'}</span>
+                          <span className="font-semibold">
+                            {rec.category || "General"}
+                          </span>
                         </div>
                       </div>
-                      <p className="text-gray-700 mb-2">{rec.action || 'No action specified'}</p>
-                      <p className="text-sm text-gray-600">{rec.impact || 'Impact assessment pending'}</p>
+                      <p className="text-gray-700 mb-2">
+                        {rec.action || "No action specified"}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {rec.impact || "Impact assessment pending"}
+                      </p>
                       {rec.specific_tasks && rec.specific_tasks.length > 0 && (
                         <div className="mt-3">
-                          <p className="text-sm font-medium text-gray-700 mb-1">Specific Tasks:</p>
+                          <p className="text-sm font-medium text-gray-700 mb-1">
+                            Specific Tasks:
+                          </p>
                           <ul className="text-sm text-gray-600 space-y-1">
-                            {rec.specific_tasks.map((task: string, taskIndex: number) => (
-                              <li key={taskIndex} className="flex items-start gap-2">
-                                <span className="w-1 h-1 bg-gray-400 rounded-full mt-2 flex-shrink-0"></span>
-                                {task}
-                              </li>
-                            ))}
+                            {rec.specific_tasks.map(
+                              (task: string, taskIndex: number) => (
+                                <li
+                                  key={taskIndex}
+                                  className="flex items-start gap-2"
+                                >
+                                  <span className="w-1 h-1 bg-gray-400 rounded-full mt-2 flex-shrink-0"></span>
+                                  {task}
+                                </li>
+                              )
+                            )}
                           </ul>
                         </div>
                       )}
@@ -1606,9 +2170,12 @@ const Dashboard = () => {
               ) : (
                 <Card>
                   <CardContent className="p-6 text-center">
-                    <p className="text-gray-600">No recommendations available yet. Complete your brand analysis to get personalized suggestions.</p>
-                    <Button 
-                      onClick={() => navigate('/analysis')} 
+                    <p className="text-gray-600">
+                      No recommendations available yet. Complete your brand
+                      analysis to get personalized suggestions.
+                    </p>
+                    <Button
+                      onClick={() => navigate("/analysis")}
                       className="mt-4"
                       variant="outline"
                     >
@@ -1616,7 +2183,8 @@ const Dashboard = () => {
                     </Button>
                   </CardContent>
                 </Card>
-              )})()}
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="data" className="space-y-6">
@@ -1629,13 +2197,21 @@ const Dashboard = () => {
                   <div className="flex justify-between items-center gap-2">
                     <span className="text-sm text-gray-600">SEO Score</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.analysis_data?.website?.seo_score}/100</span>
+                      <span className="font-medium">
+                        {report.analysis_data?.website?.seo_score}/100
+                      </span>
                       {report.data_quality?.website_api ? (
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-green-100 text-green-700 border-green-200"
+                        >
                           Live Data
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                        >
                           AI‑sourced
                         </Badge>
                       )}
@@ -1644,28 +2220,46 @@ const Dashboard = () => {
                   <div className="flex justify-between items-center gap-2">
                     <span className="text-sm text-gray-600">Performance</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.analysis_data?.website?.performance_score}/100</span>
+                      <span className="font-medium">
+                        {report.analysis_data?.website?.performance_score}/100
+                      </span>
                       {report.data_quality?.website_api ? (
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-green-100 text-green-700 border-green-200"
+                        >
                           Live Data
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                        >
                           AI‑sourced
                         </Badge>
                       )}
                     </div>
                   </div>
                   <div className="flex justify-between items-center gap-2">
-                    <span className="text-sm text-gray-600">Content Quality</span>
+                    <span className="text-sm text-gray-600">
+                      Content Quality
+                    </span>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.analysis_data?.website?.content_quality}/100</span>
+                      <span className="font-medium">
+                        {report.analysis_data?.website?.content_quality}/100
+                      </span>
                       {report.data_quality?.website_api ? (
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-green-100 text-green-700 border-green-200"
+                        >
                           Live Data
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                        >
                           AI‑sourced
                         </Badge>
                       )}
@@ -1680,69 +2274,114 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {/* Display social profiles with follower counts */}
-                  {report.analysis_data?.social?.detected_platforms && report.analysis_data.social.detected_platforms.length > 0 ? (
+                  {report.analysis_data?.social?.detected_platforms &&
+                  report.analysis_data.social.detected_platforms.length > 0 ? (
                     <div className="space-y-2">
-                      {report.analysis_data.social.detected_platforms.map((platform: any, idx: number) => {
-                        // Get platform color and icon based on platform name
-                        const platformConfig: Record<string, { color: string; bgColor: string }> = {
-                          'twitter': { color: '#1DA1F2', bgColor: 'bg-blue-50' },
-                          'x': { color: '#000000', bgColor: 'bg-gray-50' },
-                          'facebook': { color: '#1877F2', bgColor: 'bg-blue-50' },
-                          'instagram': { color: '#E4405F', bgColor: 'bg-pink-50' },
-                          'youtube': { color: '#FF0000', bgColor: 'bg-red-50' },
-                          'tiktok': { color: '#000000', bgColor: 'bg-gray-50' },
-                          'linkedin': { color: '#0A66C2', bgColor: 'bg-blue-50' }
-                        };
+                      {report.analysis_data.social.detected_platforms.map(
+                        (platform: any, idx: number) => {
+                          // Get platform color and icon based on platform name
+                          const platformConfig: Record<
+                            string,
+                            { color: string; bgColor: string }
+                          > = {
+                            twitter: {
+                              color: "#1DA1F2",
+                              bgColor: "bg-blue-50",
+                            },
+                            x: { color: "#000000", bgColor: "bg-gray-50" },
+                            facebook: {
+                              color: "#1877F2",
+                              bgColor: "bg-blue-50",
+                            },
+                            instagram: {
+                              color: "#E4405F",
+                              bgColor: "bg-pink-50",
+                            },
+                            youtube: { color: "#FF0000", bgColor: "bg-red-50" },
+                            tiktok: { color: "#000000", bgColor: "bg-gray-50" },
+                            linkedin: {
+                              color: "#0A66C2",
+                              bgColor: "bg-blue-50",
+                            },
+                          };
 
-                        const config = platformConfig[platform.platform?.toLowerCase()] || { color: '#666', bgColor: 'bg-gray-50' };
+                          const config = platformConfig[
+                            platform.platform?.toLowerCase()
+                          ] || { color: "#666", bgColor: "bg-gray-50" };
 
-                        return (
-                          <div key={idx} className={`flex justify-between items-center p-3 ${config.bgColor} rounded-lg border border-gray-200`}>
-                            <div className="flex items-center gap-3">
-                              <div
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                                style={{ backgroundColor: config.color }}
-                              >
-                                {platform.platform?.charAt(0).toUpperCase()}
+                          return (
+                            <div
+                              key={idx}
+                              className={`flex justify-between items-center p-3 ${config.bgColor} rounded-lg border border-gray-200`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                                  style={{ backgroundColor: config.color }}
+                                >
+                                  {platform.platform?.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-semibold text-gray-800 capitalize">
+                                    {platform.platform}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {platform.followers
+                                      ? `${platform.followers.toLocaleString()} followers`
+                                      : "No data"}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex flex-col">
-                                <span className="text-sm font-semibold text-gray-800 capitalize">{platform.platform}</span>
-                                <span className="text-xs text-gray-500">
-                                  {platform.followers ? `${platform.followers.toLocaleString()} followers` : 'No data'}
-                                </span>
-                              </div>
+                              {platform.source && (
+                                <Badge variant="outline" className="text-xs">
+                                  {platform.source === "twitter-api" && "🐦"}
+                                  {platform.source === "youtube-api" && "📺"}
+                                  {platform.source === "scrapapi" && "🔍"}
+                                  {platform.source &&
+                                    ![
+                                      "twitter-api",
+                                      "youtube-api",
+                                      "scrapapi",
+                                    ].includes(platform.source) &&
+                                    "✓"}
+                                </Badge>
+                              )}
                             </div>
-                            {platform.source && (
-                              <Badge variant="outline" className="text-xs">
-                                {platform.source === 'twitter-api' && '🐦'}
-                                {platform.source === 'youtube-api' && '📺'}
-                                {platform.source === 'scrapapi' && '🔍'}
-                                {platform.source && !['twitter-api', 'youtube-api', 'scrapapi'].includes(platform.source) && '✓'}
-                              </Badge>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        }
+                      )}
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500">No social media profiles detected</div>
+                    <div className="text-sm text-gray-500">
+                      No social media profiles detected
+                    </div>
                   )}
 
                   {/* Total followers summary */}
                   <div className="flex justify-between items-center gap-2 pt-2 border-t mt-4">
-                    <span className="text-sm font-semibold text-gray-600">Total Followers</span>
+                    <span className="text-sm font-semibold text-gray-600">
+                      Total Followers
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-lg text-gray-900">
-                        {report.data_quality?.social_api && typeof report.analysis_data?.social?.total_followers === 'number'
+                        {report.data_quality?.social_api &&
+                        typeof report.analysis_data?.social?.total_followers ===
+                          "number"
                           ? report.analysis_data.social.total_followers.toLocaleString()
-                          : '—'}
+                          : "—"}
                       </span>
                       {report.data_quality?.social_api ? (
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-green-100 text-green-700 border-green-200"
+                        >
                           Live Data
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                        >
                           AI‑sourced
                         </Badge>
                       )}
@@ -1757,7 +2396,9 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between items-center gap-2">
-                    <span className="text-sm text-gray-600">Average Rating</span>
+                    <span className="text-sm text-gray-600">
+                      Average Rating
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
                         {report.analysis_data.googleReviews.rating?.toFixed(1)}
@@ -1787,7 +2428,8 @@ const Dashboard = () => {
                     <span className="text-sm text-gray-600">Total Reviews</span>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
-    {report.analysis_data.googleReviews.totalReviews || 0} reviews
+                        {report.analysis_data.googleReviews.totalReviews || 0}{" "}
+                        reviews
                         {/* {report.analysis_data?.trustpilotReviews?.totalReviews
                           ? report.analysis_data.trustpilotReviews.totalReviews.toLocaleString()
                           : report.data_quality?.reputation_api && typeof report.analysis_data?.reputation?.total_reviews === 'number'
@@ -1812,43 +2454,60 @@ const Dashboard = () => {
 
                   {/* Trustpilot Reviews Preview */}
                   {report.analysis_data?.trustpilotReviews?.reviews &&
-                    report.analysis_data.trustpilotReviews.reviews.length > 0 && (
+                    report.analysis_data.trustpilotReviews.reviews.length >
+                      0 && (
                       <div className="mt-4 pt-4 border-t">
-                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Recent Trustpilot Reviews</h4>
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                          Recent Trustpilot Reviews
+                        </h4>
                         <div className="space-y-2">
-                          {report.analysis_data.trustpilotReviews.reviews.slice(0, 2).map((review: any, idx: number) => (
-                            <div key={idx} className="p-2 bg-blue-50 rounded border border-blue-100">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <p className="text-xs font-medium text-gray-800">{review.title}</p>
-                                  <div className="flex gap-0.5 mt-1">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-3 w-3 ${
-                                          i < (review.rating || 0)
-                                            ? 'fill-amber-400 text-amber-400'
-                                            : 'text-gray-300'
-                                        }`}
-                                      />
-                                    ))}
+                          {report.analysis_data.trustpilotReviews.reviews
+                            .slice(0, 2)
+                            .map((review: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="p-2 bg-blue-50 rounded border border-blue-100"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <p className="text-xs font-medium text-gray-800">
+                                      {review.title}
+                                    </p>
+                                    <div className="flex gap-0.5 mt-1">
+                                      {[...Array(5)].map((_, i) => (
+                                        <Star
+                                          key={i}
+                                          className={`h-3 w-3 ${
+                                            i < (review.rating || 0)
+                                              ? "fill-amber-400 text-amber-400"
+                                              : "text-gray-300"
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       </div>
                     )}
 
                   {report.data_quality?.reputation_api && (
                     <div className="flex justify-between items-center gap-2 pt-2 border-t">
-                      <span className="text-sm text-gray-600">Response Rate</span>
+                      <span className="text-sm text-gray-600">
+                        Response Rate
+                      </span>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
-                          {report.analysis_data?.reputation?.response_rate ? report.analysis_data.reputation.response_rate : '—'}
+                          {report.analysis_data?.reputation?.response_rate
+                            ? report.analysis_data.reputation.response_rate
+                            : "—"}
                         </span>
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-green-100 text-green-700 border-green-200"
+                        >
                           Live Data
                         </Badge>
                       </div>
@@ -1864,7 +2523,8 @@ const Dashboard = () => {
               <CardHeader>
                 <CardTitle>API Integration Status</CardTitle>
                 <CardDescription>
-                  View which data sources are connected and how to improve your report accuracy.
+                  View which data sources are connected and how to improve your
+                  report accuracy.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1875,11 +2535,17 @@ const Dashboard = () => {
                       <span>Website API</span>
                     </div>
                     {report.data_quality?.website_api ? (
-                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-green-100 text-green-700 border-green-200"
+                      >
                         Live Data
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                      >
                         AI‑sourced
                       </Badge>
                     )}
@@ -1890,11 +2556,17 @@ const Dashboard = () => {
                       <span>Social Media API</span>
                     </div>
                     {report.data_quality?.social_api ? (
-                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-green-100 text-green-700 border-green-200"
+                      >
                         Live Data
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                      >
                         AI‑sourced
                       </Badge>
                     )}
@@ -1905,11 +2577,17 @@ const Dashboard = () => {
                       <span>Reputation API</span>
                     </div>
                     {report.data_quality?.reputation_api ? (
-                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-green-200">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-green-100 text-green-700 border-green-200"
+                      >
                         Live Data
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-gray-100 text-gray-600 border-gray-300"
+                      >
                         AI‑sourced
                       </Badge>
                     )}
@@ -1928,8 +2606,9 @@ const Dashboard = () => {
               Ready to Improve Your Brand Equity?
             </h2>
             <p className="text-brand-100 mb-6 max-w-2xl mx-auto">
-              Book a free consultation with a representative from TopServ Digital to discuss your brand analysis 
-              and create a strategic plan to boost your digital presence.
+              Book a free consultation with a representative from TopServ
+              Digital to discuss your brand analysis and create a strategic plan
+              to boost your digital presence.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
               <div className="flex items-center gap-2 text-brand-100">
