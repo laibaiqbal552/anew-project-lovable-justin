@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import topservLogo from '@/assets/topserv-logo.png'
+import topservLogo from "/assets/topserv-logo.png";
 
 export default function SiteHeader() {
   const { pathname } = useLocation()
