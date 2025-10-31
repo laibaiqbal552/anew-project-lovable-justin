@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { comprehensiveBrandAnalysisSchema, validateInput } from '../_shared/validation.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -68,7 +69,17 @@ serve(async (req) => {
   }
 
   try {
-    const requestData: ComprehensiveBrandAnalysisRequest = await req.json()
+    const rawData = await req.json()
+    
+    // Validate input
+    const validation = validateInput(comprehensiveBrandAnalysisSchema, rawData)
+    if (!validation.success) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Invalid input: ${validation.error}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
     const {
       businessName,
       websiteUrl,
@@ -79,11 +90,7 @@ serve(async (req) => {
       longitude,
       socialProfiles,
       reportId
-    } = requestData
-
-    if (!businessName) {
-      throw new Error('Business name is required')
-    }
+    } = validation.data
 
     console.log(`Starting comprehensive brand analysis for: ${businessName}`)
 

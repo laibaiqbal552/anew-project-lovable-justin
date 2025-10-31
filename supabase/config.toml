@@ -7,6 +7,27 @@ schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
+[functions.run-brand-analysis]
+verify_jwt = true
+
+[functions.comprehensive-brand-analysis]
+verify_jwt = true
+
+[functions.generate-pdf-report]
+verify_jwt = true
+
+[functions.fetch-competitor-search]
+verify_jwt = false
+
+[functions.fetch-competitor-reviews]
+verify_jwt = false
+
+[functions.fetch-google-reviews]
+verify_jwt = false
+
+[functions.fetch-trustpilot-reviews]
+verify_jwt = false
+
 [functions.analyze-website]
 verify_jwt = false
 
@@ -28,26 +49,5 @@ verify_jwt = false
 [functions.generate-score-breakdown]
 verify_jwt = false
 
-[functions.run-brand-analysis]
-verify_jwt = false
-
 [functions.test-analysis]
-verify_jwt = false
-
-[functions.generate-pdf-report]
-verify_jwt = false
-
-[functions.comprehensive-brand-analysis]
-verify_jwt = false
-
-[functions.fetch-competitor-search]
-verify_jwt = false
-
-[functions.fetch-competitor-reviews]
-verify_jwt = false
-
-[functions.fetch-google-reviews]
-verify_jwt = false
-
-[functions.fetch-trustpilot-reviews]
 verify_jwt = false
