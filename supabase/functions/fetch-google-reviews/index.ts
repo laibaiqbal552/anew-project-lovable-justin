@@ -6,6 +6,39 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+// Helper function to extract domain from URL
+function extractDomain(url: string): string {
+  try {
+    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
+    return urlObj.hostname.replace('www.', '').toLowerCase()
+  } catch {
+    return url.replace('www.', '').toLowerCase()
+  }
+}
+
+// Helper function to calculate name similarity (simple Levenshtein-based)
+function calculateNameSimilarity(name1: string, name2: string): number {
+  const s1 = name1.toLowerCase().trim()
+  const s2 = name2.toLowerCase().trim()
+
+  // Exact match
+  if (s1 === s2) return 1.0
+
+  // Check if one contains the other
+  if (s1.includes(s2) || s2.includes(s1)) return 0.8
+
+  // Simple word overlap check
+  const words1 = s1.split(/\s+/)
+  const words2 = s2.split(/\s+/)
+  const commonWords = words1.filter(w => words2.includes(w))
+
+  if (commonWords.length === 0) return 0
+
+  // Calculate overlap ratio
+  const overlapRatio = (commonWords.length * 2) / (words1.length + words2.length)
+  return overlapRatio
+}
+
 interface GoogleReview {
   author: string
   rating: number
@@ -97,37 +130,82 @@ serve(async (req) => {
       placeId = place.place_id
     }
 
-    // Method 2: If no results, try searching with just the address (for Nearby Search)
-    if (!placeId && address) {
-      console.log(`⚠️ FindPlace returned no results, trying Nearby Search with address...`)
+    // Method 2: If no results, try Text Search API (more flexible than FindPlace)
+    if (!placeId) {
+      console.log(`⚠️ FindPlace returned no results, trying Text Search...`)
 
-      // Geocode the address first
-      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${googleMapsApiKey}`
-      const geocodeResponse = await fetch(geocodeUrl, {
-        signal: AbortSignal.timeout(8000)
+      const textSearchQuery = address ? `${businessName} ${address}` : businessName
+      const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(textSearchQuery)}&key=${googleMapsApiKey}`
+
+      const textSearchResponse = await fetch(textSearchUrl, {
+        signal: AbortSignal.timeout(10000)
       })
-      const geocodeData = await geocodeResponse.json()
+      const textSearchData = await textSearchResponse.json()
 
-      if (geocodeData.status === 'OK' && geocodeData.results && geocodeData.results.length > 0) {
-        const lat = geocodeData.results[0].geometry.location.lat
-        const lng = geocodeData.results[0].geometry.location.lng
+      if (textSearchData.status === 'OK' && textSearchData.results && textSearchData.results.length > 0) {
+        // Try to find best match by name similarity and website verification
+        let bestMatch = null
 
-        // Now search nearby businesses
-        const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=100&type=point_of_interest&key=${googleMapsApiKey}`
-        const nearbyResponse = await fetch(nearbyUrl, {
-          signal: AbortSignal.timeout(8000)
-        })
-        const nearbyData = await nearbyResponse.json()
+        for (const result of textSearchData.results) {
+          const nameMatch = calculateNameSimilarity(businessName, result.name)
+          console.log(`   Checking: ${result.name} (similarity: ${nameMatch})`)
 
-        if (nearbyData.status === 'OK' && nearbyData.results && nearbyData.results.length > 0) {
-          // Find the business that matches by name (best match)
-          const bestMatch = nearbyData.results.find((p: any) =>
-            p.name.toLowerCase().includes(businessName.toLowerCase().split(/\s+/)[0])
-          ) || nearbyData.results[0]
+          // If we have a website to verify against, use it
+          if (website && result.website) {
+            const websiteDomain = extractDomain(website)
+            const resultDomain = extractDomain(result.website)
+            if (websiteDomain === resultDomain) {
+              console.log(`   ✅ Website match found: ${result.name}`)
+              bestMatch = result
+              break
+            }
+          }
 
-          console.log(`✅ Found via Nearby Search: ${bestMatch.name}`)
+          // Otherwise use name similarity (require at least 60% match)
+          if (nameMatch > 0.6 && (!bestMatch || nameMatch > calculateNameSimilarity(businessName, bestMatch.name))) {
+            bestMatch = result
+          }
+        }
+
+        if (bestMatch) {
+          console.log(`✅ Found via Text Search: ${bestMatch.name}`)
           place = bestMatch
           placeId = bestMatch.place_id
+        } else {
+          console.log(`⚠️ No good matches found in Text Search results`)
+        }
+      }
+    }
+
+    // Method 3: Last resort - try just the business name without address
+    if (!placeId && address) {
+      console.log(`⚠️ Still no results, trying business name only...`)
+
+      const nameOnlyUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(businessName)}&inputtype=textquery&fields=place_id,name,formatted_address,website,formatted_phone_number,rating,user_ratings_total&key=${googleMapsApiKey}`
+
+      const nameOnlyResponse = await fetch(nameOnlyUrl, {
+        signal: AbortSignal.timeout(10000)
+      })
+      const nameOnlyData = await nameOnlyResponse.json()
+
+      if (nameOnlyData.status === 'OK' && nameOnlyData.candidates && nameOnlyData.candidates.length > 0) {
+        // Verify with website if available
+        if (website) {
+          const websiteDomain = extractDomain(website)
+          const match = nameOnlyData.candidates.find((c: any) =>
+            c.website && extractDomain(c.website) === websiteDomain
+          )
+
+          if (match) {
+            console.log(`✅ Found via name-only search with website verification: ${match.name}`)
+            place = match
+            placeId = match.place_id
+          }
+        } else {
+          // No website to verify, use first result
+          place = nameOnlyData.candidates[0]
+          placeId = place.place_id
+          console.log(`✅ Found via name-only search: ${place.name}`)
         }
       }
     }

@@ -177,10 +177,32 @@ serve(async (req) => {
       console.error(`   Industry: "${industry}", Business name: "${businessName}"`)
     }
 
-    // Step 3: Format competitors (take top N results)
-    // Note: We don't filter by exact business name since Google's Nearby Search
-    // already returns businesses by keyword/type. The user can see all results.
+    // Step 3: Filter out the main business and format competitors
+    // Filter logic: Exclude businesses that match the main business name or address
     const competitors: Competitor[] = nearbyData.results
+      .filter((place) => {
+        // Normalize names for comparison
+        const placeName = place.name.toLowerCase().trim()
+        const mainBusinessName = businessName.toLowerCase().trim()
+
+        // Check if names are too similar (exact match or high overlap)
+        const isNameMatch = placeName === mainBusinessName ||
+                           placeName.includes(mainBusinessName) ||
+                           mainBusinessName.includes(placeName)
+
+        // Check if addresses match (normalize for comparison)
+        const placeAddress = place.formatted_address?.toLowerCase().replace(/\s+/g, ' ') || ''
+        const mainAddress = address.toLowerCase().replace(/\s+/g, ' ')
+        const isAddressMatch = placeAddress.includes(mainAddress) || mainAddress.includes(placeAddress)
+
+        // Exclude if both name and address match
+        if (isNameMatch && isAddressMatch) {
+          console.log(`🚫 Excluding main business from competitors: ${place.name}`)
+          return false
+        }
+
+        return true
+      })
       .slice(0, limit)
       .map((place) => ({
         name: place.name,
