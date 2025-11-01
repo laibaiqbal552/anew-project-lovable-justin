@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { reputationAnalysisSchema, validateInput } from '../_shared/validation.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,12 +52,19 @@ serve(async (req) => {
   }
 
   try {
-    const { businessName, websiteUrl, address, phoneNumber, phone, reportId }: ReputationAnalysisRequest = await req.json()
-    console.log(`Starting reputation analysis for: ${businessName}`)
-
-    if (!businessName) {
-      throw new Error('Business name is required for reputation analysis')
+    const rawData = await req.json()
+    
+    // Validate input
+    const validation = validateInput(reputationAnalysisSchema, rawData)
+    if (!validation.success) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Invalid input: ${validation.error}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
     }
+
+    const { businessName, websiteUrl, address, phoneNumber, phone, reportId } = validation.data
+    console.log(`Starting reputation analysis for: ${businessName}`)
 
     // Perform comprehensive reputation analysis
     const analysis = await performReputationAnalysis(businessName, websiteUrl, address, phone ?? phoneNumber)

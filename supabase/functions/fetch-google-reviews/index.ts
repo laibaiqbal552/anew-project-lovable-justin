@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { googleReviewsSchema, validateInput } from '../_shared/validation.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,12 +65,18 @@ serve(async (req) => {
   }
 
   try {
-    const { businessName, address, website } = await req.json()
-
-    if (!businessName) {
-      throw new Error('Business name is required')
+    const rawData = await req.json()
+    
+    // Validate input
+    const validation = validateInput(googleReviewsSchema, rawData)
+    if (!validation.success) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Invalid input: ${validation.error}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
     }
 
+    const { businessName, address, website } = validation.data
     console.log(`Fetching Google Reviews for: ${businessName}`)
 
     // Get Google Maps API key from environment
