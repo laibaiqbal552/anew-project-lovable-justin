@@ -28,6 +28,9 @@ verify_jwt = false
 [functions.fetch-trustpilot-reviews]
 verify_jwt = false
 
+[functions.places-autocomplete]
+verify_jwt = false
+
 [functions.analyze-website]
 verify_jwt = false
 

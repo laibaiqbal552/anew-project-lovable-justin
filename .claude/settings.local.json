@@ -26,7 +26,8 @@
       "Bash(node test-geocoding-direct.js:*)",
       "Bash(netstat:*)",
       "Bash(npm run dev:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(node test-places-autocomplete.js:*)"
     ],
     "deny": [],
     "ask": []

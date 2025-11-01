@@ -3,10 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useLoadScript, StandaloneSearchBox } from "@react-google-maps/api";
-
-// Google Maps libraries - must be defined outside component to avoid performance warning
-const GOOGLE_MAPS_LIBRARIES: ("places")[] = ["places"];
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -98,7 +94,6 @@ type ScanForm = z.infer<typeof scanSchema>;
 
 const StartScan = () => {
   const navigate = useNavigate();
-  const searchBoxRef = useRef<any>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -107,12 +102,12 @@ const StartScan = () => {
   const [reviewData, setReviewData] = useState<ScanForm | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Load Google Maps with Places API
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const { isLoaded } = useLoadScript({
-    googleMapsApiKey: googleMapsApiKey || "",
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  // Address autocomplete state
+  const [addressInput, setAddressInput] = useState("");
+  const [predictions, setPredictions] = useState<any[]>([]);
+  const [showPredictions, setShowPredictions] = useState(false);
+  const [isLoadingPredictions, setIsLoadingPredictions] = useState(false);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
 
   // Check if user is already logged in AND if returning from social media
   useEffect(() => {
@@ -191,16 +186,81 @@ const StartScan = () => {
     },
   });
 
-  // Handle place selection from StandaloneSearchBox
-  const handlePlacesChanged = () => {
-    const places = searchBoxRef.current?.getPlaces();
-    if (places && places.length > 0) {
-      const place = places[0];
-      const formatted_address = place.formatted_address;
-      console.log("✅ Place selected:", formatted_address);
-      form.setValue("address", formatted_address);
+  // Debounce timer for autocomplete
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch address predictions from edge function
+  const fetchAddressPredictions = async (input: string) => {
+    if (input.length < 3) {
+      setPredictions([]);
+      setShowPredictions(false);
+      return;
+    }
+
+    setIsLoadingPredictions(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('places-autocomplete', {
+        body: { input }
+      });
+
+      if (error) throw error;
+
+      if (data && data.success && data.predictions) {
+        setPredictions(data.predictions);
+        setShowPredictions(data.predictions.length > 0);
+      } else {
+        setPredictions([]);
+        setShowPredictions(false);
+      }
+    } catch (err) {
+      console.error('Error fetching address predictions:', err);
+      setPredictions([]);
+      setShowPredictions(false);
+    } finally {
+      setIsLoadingPredictions(false);
     }
   };
+
+  // Handle address input change with debounce
+  const handleAddressInputChange = (value: string) => {
+    setAddressInput(value);
+    form.setValue("address", value);
+
+    // Clear previous timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set new timer
+    debounceTimerRef.current = setTimeout(() => {
+      fetchAddressPredictions(value);
+    }, 300);
+  };
+
+  // Handle prediction selection
+  const handlePredictionSelect = (prediction: any) => {
+    const address = prediction.description;
+    setAddressInput(address);
+    form.setValue("address", address);
+    setPredictions([]);
+    setShowPredictions(false);
+    console.log("✅ Address selected:", address);
+  };
+
+  // Close predictions dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target as Node)) {
+        setShowPredictions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleSkipAccount = () => {
     setSkipAccount(true);
@@ -856,32 +916,52 @@ const StartScan = () => {
                       <MapPin className="h-4 w-4" />
                       Business Address *
                     </Label>
-                    {isLoaded && (
-                      <StandaloneSearchBox
-                        onPlacesChanged={handlePlacesChanged}
-                        onLoad={(ref) => {
-                          searchBoxRef.current = ref;
-                        }}
-                      >
-                        <input
-                          type="text"
-                          placeholder="Start typing an address..."
-                          {...form.register("address")}
-                          style={{
-                            boxSizing: `border-box`,
-                            border: `1px solid #e5e7eb`,
-                            width: `100%`,
-                            height: `40px`,
-                            padding: `0 12px`,
-                            borderRadius: `6px`,
-                            fontSize: `14px`,
-                            outline: `none`,
-                          }}
-                          disabled={isLoading}
-                          autoComplete="off"
-                        />
-                      </StandaloneSearchBox>
-                    )}
+                    <div className="relative" ref={autocompleteRef}>
+                      <Input
+                        id="address"
+                        type="text"
+                        placeholder="Start typing an address..."
+                        value={addressInput}
+                        onChange={(e) => handleAddressInputChange(e.target.value)}
+                        disabled={isLoading}
+                        autoComplete="off"
+                      />
+
+                      {/* Autocomplete Dropdown */}
+                      {showPredictions && predictions.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                          {predictions.map((prediction, index) => (
+                            <button
+                              key={prediction.place_id || index}
+                              type="button"
+                              onClick={() => handlePredictionSelect(prediction)}
+                              className="w-full text-left px-4 py-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors"
+                            >
+                              <div className="flex items-start gap-2">
+                                <MapPin className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-gray-900 text-sm">
+                                    {prediction.structured_formatting?.main_text || prediction.description}
+                                  </div>
+                                  {prediction.structured_formatting?.secondary_text && (
+                                    <div className="text-xs text-gray-500 truncate">
+                                      {prediction.structured_formatting.secondary_text}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Loading indicator */}
+                      {isLoadingPredictions && (
+                        <div className="absolute right-3 top-3">
+                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        </div>
+                      )}
+                    </div>
 
                     {form.formState.errors.address && (
                       <p className="text-sm text-destructive">
