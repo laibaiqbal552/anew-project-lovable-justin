@@ -72,6 +72,8 @@ const scanSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   // Business Info
+  firstName: z.string().min(2, "Please enter your first name"),
+  lastName: z.string().min(2, "Please enter your last name"),
   businessName: z
     .string()
     .min(2, "Business name must be at least 2 characters"),
@@ -177,6 +179,8 @@ const StartScan = () => {
       fullName: "",
       email: "",
       password: "",
+      firstName: "",
+      lastName: "",
       businessName: "",
       websiteUrl: "",
       industry: "",
@@ -296,6 +300,8 @@ const StartScan = () => {
         email: userEmail,
         phone: data.phone,
         fullName: userName,
+        firstName: data.firstName,
+        lastName: data.lastName,
         businessName: data.businessName,
         website: data.websiteUrl,
         industry: data.industry,
@@ -330,6 +336,8 @@ const StartScan = () => {
     // Validate current step - Step 1 is now skipped, so only handle Step 2 and Step 4
     if (step === 2) {
       const valid = await form.trigger([
+        "firstName",
+        "lastName",
         "businessName",
         "websiteUrl",
         "industry",
@@ -815,6 +823,52 @@ const StartScan = () => {
               {/* Step 2: Business Info */}
               {step === 2 && (
                 <div className="space-y-6 animate-fade-in">
+                  {/* First Name and Last Name Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="firstName"
+                        className="flex items-center gap-2"
+                      >
+                        <User className="h-4 w-4" />
+                        First Name *
+                      </Label>
+                      <Input
+                        id="firstName"
+                        {...form.register("firstName")}
+                        placeholder="John"
+                        disabled={isLoading}
+                      />
+                      {form.formState.errors.firstName && (
+                        <p className="text-sm text-destructive">
+                          {form.formState.errors.firstName.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="lastName"
+                        className="flex items-center gap-2"
+                      >
+                        <User className="h-4 w-4" />
+                        Last Name *
+                      </Label>
+                      <Input
+                        id="lastName"
+                        {...form.register("lastName")}
+                        placeholder="Smith"
+                        disabled={isLoading}
+                      />
+                      {form.formState.errors.lastName && (
+                        <p className="text-sm text-destructive">
+                          {form.formState.errors.lastName.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Business Name and Website URL Row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label
@@ -1029,6 +1083,18 @@ const StartScan = () => {
                         Business Information
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">First Name:</span>
+                          <p className="font-medium text-gray-900">
+                            {reviewData.firstName}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Last Name:</span>
+                          <p className="font-medium text-gray-900">
+                            {reviewData.lastName}
+                          </p>
+                        </div>
                         <div>
                           <span className="text-gray-500">Business Name:</span>
                           <p className="font-medium text-gray-900">
