@@ -27,7 +27,9 @@
       "Bash(netstat:*)",
       "Bash(npm run dev:*)",
       "Bash(curl:*)",
-      "Bash(node test-places-autocomplete.js:*)"
+      "Bash(node test-places-autocomplete.js:*)",
+      "Bash(node test-google-reviews-fix.js:*)",
+      "Bash(node test-business-search.js:*)"
     ],
     "deny": [],
     "ask": []

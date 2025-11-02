@@ -881,7 +881,7 @@ const StartScan = () => {
                       <Input
                         id="businessName"
                         {...form.register("businessName")}
-                        placeholder="Your Business Name"
+                        placeholder="e.g., Paramount Pest Solutions"
                         disabled={isLoading}
                       />
                       {form.formState.errors.businessName && (
