@@ -45,9 +45,9 @@ serve(async (req) => {
     // Remove www. prefix as SEMrush typically indexes root domains
     parsedDomain = parsedDomain.replace(/^www\./, '')
 
-    // 1. Get Domain Overview (organic keywords, traffic, etc.)
-    console.log(`Fetching SEMrush Domain Overview for: ${parsedDomain}`)
-    const overviewUrl = `https://api.semrush.com/?type=domain_overview&key=${apiKey}&display_limit=1&domain=${parsedDomain}&database=us`
+    // 1. Get Domain Ranks (organic keywords, traffic, etc.)
+    console.log(`Fetching SEMrush Domain Ranks for: ${parsedDomain}`)
+    const overviewUrl = `https://api.semrush.com/?type=domain_ranks&key=${apiKey}&domain=${parsedDomain}&database=us`
     const overviewRes = await fetch(overviewUrl)
 
     let overviewData = {
@@ -64,13 +64,14 @@ serve(async (req) => {
       if (lines.length > 1) {
         console.log(`📊 Second line: ${lines[1]}`)
       }
-      if (lines.length > 1 && lines[1] !== 'Nothing found.') {
+      if (lines.length > 1 && lines[1] !== 'Nothing found.' && !lines[1].includes('ERROR')) {
         const values = lines[1].split(';')
-        // Domain Overview format: Domain;Organic Keywords;Organic Traffic;Organic Cost;...
+        // Domain Ranks format: Database;Domain;Rank;Organic Keywords;Organic Traffic;Organic Cost;...
+        // Index: 0=Database, 1=Domain, 2=Rank, 3=Organic Keywords, 4=Organic Traffic
         overviewData = {
-          organic_keywords: parseInt(values[1]) || 0,
-          organic_traffic: parseInt(values[2]) || 0,
-          search_visibility: Math.round((parseInt(values[2]) || 0) / 100), // Normalize to 0-100
+          organic_keywords: parseInt(values[3]) || 0,
+          organic_traffic: parseInt(values[4]) || 0,
+          search_visibility: Math.round((parseInt(values[4]) || 0) / 10000), // Normalize to 0-100
         }
         console.log(`SEMrush Overview: Keywords=${overviewData.organic_keywords}, Traffic=${overviewData.organic_traffic}`)
       } else {
@@ -82,8 +83,8 @@ serve(async (req) => {
       console.error(`❌ Error response: ${errorText.substring(0, 200)}`)
     }
 
-    // 2. Get Backlinks Overview (backlinks, referring domains, authority)
-    console.log(`Fetching SEMrush Backlinks for: ${parsedDomain}`)
+    // 2. Try to get Backlinks data (may not be available in all plans)
+    console.log(`Attempting to fetch SEMrush Backlinks for: ${parsedDomain}`)
     const backlinksUrl = `https://api.semrush.com/?type=backlinks_overview&key=${apiKey}&target=${parsedDomain}&target_type=root_domain`
     const backlinksRes = await fetch(backlinksUrl)
 
@@ -97,7 +98,18 @@ serve(async (req) => {
       const backlinksText = await backlinksRes.text()
       console.log(`🔗 SEMrush Backlinks Response (first 500 chars): ${backlinksText.substring(0, 500)}`)
       const lines = backlinksText.trim().split('\n')
-      if (lines.length > 1 && lines[1] !== 'Nothing found.') {
+
+      // Check if endpoint is not available (common for basic plans)
+      if (backlinksText.includes('ERROR') || backlinksText.includes('query type not found')) {
+        console.log('⚠️ Backlinks endpoint not available - using estimated values based on traffic')
+        // Estimate authority from organic metrics if backlinks not available
+        const trafficScore = Math.min(100, Math.floor(overviewData.organic_traffic / 100000))
+        backlinksData = {
+          backlinks_count: 0,
+          referring_domains: 0,
+          authority_score: Math.min(100, 20 + trafficScore), // Estimate from traffic
+        }
+      } else if (lines.length > 1 && lines[1] !== 'Nothing found.') {
         const values = lines[1].split(';')
         // Backlinks Overview format: Target;Backlinks;Domains;IP Addresses;...
         backlinksData = {
