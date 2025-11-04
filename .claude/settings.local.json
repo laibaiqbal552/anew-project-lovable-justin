@@ -29,7 +29,8 @@
       "Bash(curl:*)",
       "Bash(node test-places-autocomplete.js:*)",
       "Bash(node test-google-reviews-fix.js:*)",
-      "Bash(node test-business-search.js:*)"
+      "Bash(node test-business-search.js:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

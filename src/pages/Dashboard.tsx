@@ -394,6 +394,11 @@ const Dashboard = () => {
           const guestResults = localStorage.getItem("guestAnalysisResults");
           if (guestResults) {
             reportData = JSON.parse(guestResults);
+            console.log('🔍 Dashboard: Loaded guest report data:', {
+              hasAnalysisData: !!reportData.analysis_data,
+              hasSeo: !!reportData.analysis_data?.seo,
+              seoData: reportData.analysis_data?.seo
+            });
           } else {
             console.log(
               "No guest analysis results found, redirecting to analysis"
@@ -1714,7 +1719,17 @@ const Dashboard = () => {
             )}
 
             {/* SEMrush SEO Metrics */}
-            {report.analysis_data?.seo && (
+            {(() => {
+              const shouldShow = report.analysis_data?.seo;
+              console.log('🔍 Dashboard: SEMrush section render check:', {
+                shouldShow,
+                hasReport: !!report,
+                hasAnalysisData: !!report?.analysis_data,
+                hasSeo: !!report?.analysis_data?.seo,
+                seoData: report?.analysis_data?.seo
+              });
+              return shouldShow;
+            })() && (
               <Card className="border-l-4 border-l-green-500">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

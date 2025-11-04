@@ -884,6 +884,9 @@ const StartScan = () => {
                         placeholder="e.g., Paramount Pest Solutions"
                         disabled={isLoading}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        💡 Use proper capitalization for accurate results
+                      </p>
                       {form.formState.errors.businessName && (
                         <p className="text-sm text-destructive">
                           {form.formState.errors.businessName.message}

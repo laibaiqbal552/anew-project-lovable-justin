@@ -326,6 +326,11 @@ const Analysis = () => {
 
         console.log('PageSpeed analysis completed:', pageSpeedResults);
         console.log('SEMrush analysis completed:', semrushResults);
+        console.log('🔍 SEMrush Results Details:', {
+          hasSemrushResults: !!semrushResults,
+          semrushKeys: semrushResults ? Object.keys(semrushResults) : [],
+          semrushData: semrushResults
+        });
       }
 
       // Get detected social media data
@@ -764,6 +769,10 @@ const Analysis = () => {
       if (isGuest) {
         // Guest user - store results in localStorage
         console.log('Guest mode: Storing results in localStorage');
+        console.log('🔍 Analysis Data SEO Object:', {
+          hasSeo: !!analysisData.seo,
+          seoData: analysisData.seo
+        });
         localStorage.setItem('guestAnalysisResults', JSON.stringify({
           overall_score: overallScore,
           website_score: websiteScore,
