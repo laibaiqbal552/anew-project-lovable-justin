@@ -1785,7 +1785,7 @@ const Dashboard = () => {
                     return (
                       <div className="space-y-6">
                         {/* Domain Authority */}
-                    <div className="space-y-3">
+                    {/* <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-gray-900">
                           Domain Authority
@@ -1819,7 +1819,7 @@ const Dashboard = () => {
                       <p className="text-xs text-gray-600">
                         Overall domain strength based on backlink profile
                       </p>
-                    </div>
+                    </div> */}
 
                     {/* Organic Keywords */}
                     <div className="space-y-3">
@@ -1855,7 +1855,7 @@ const Dashboard = () => {
                     </div>
 
                     {/* Backlinks */}
-                    <div className="space-y-3">
+                    {/* <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-gray-900">
                           Total Backlinks
@@ -1868,10 +1868,10 @@ const Dashboard = () => {
                       <p className="text-xs text-gray-600">
                         Total number of links pointing to your domain
                       </p>
-                    </div>
+                    </div> */}
 
                     {/* Referring Domains */}
-                    <div className="space-y-3">
+                    {/* <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-gray-900">
                           Referring Domains
@@ -1884,7 +1884,7 @@ const Dashboard = () => {
                       <p className="text-xs text-gray-600">
                         Number of unique domains linking to you
                       </p>
-                    </div>
+                    </div> */}
 
                     {/* SEO Health Score */}
                     <div className="space-y-3">

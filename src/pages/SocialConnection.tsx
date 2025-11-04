@@ -478,6 +478,182 @@ const SocialConnection = () => {
     }
   };
 
+  // Fetch Instagram followers by scraping public profile
+  const fetchInstagramFollowers = async (username: string): Promise<number | null> => {
+    try {
+      const instagramUrl = `https://www.instagram.com/${username}/`;
+      console.log(`📸 Fetching Instagram followers for @${username}`);
+      console.log(`🔗 Instagram URL: ${instagramUrl}`);
+
+      let htmlContent = '';
+
+      // Try multiple CORS proxies
+      const corsProxies = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(instagramUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(instagramUrl)}`,
+        `https://cors-anywhere.herokuapp.com/${instagramUrl}`
+      ];
+
+      for (const corsProxyUrl of corsProxies) {
+        try {
+          console.log(`📡 Trying CORS proxy...`);
+          const corsResponse = await fetch(corsProxyUrl, {
+            signal: AbortSignal.timeout(10000),
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+          });
+          if (corsResponse.ok) {
+            htmlContent = await corsResponse.text();
+            console.log(`✅ CORS proxy succeeded (length: ${htmlContent.length})`);
+            break;
+          }
+        } catch (corsError) {
+          console.log(`⚠️ CORS proxy failed, trying next...`);
+        }
+      }
+
+      if (!htmlContent) {
+        console.warn(`⚠️ Could not fetch Instagram page for @${username}`);
+        return null;
+      }
+
+      console.log(`📄 Searching for followers in HTML (length: ${htmlContent.length})`);
+
+      // Extract followers from Instagram JSON data in HTML
+      let followersCount = null;
+
+      // Pattern 1: Look for edge_followed_by in JSON
+      const jsonPattern = /"edge_followed_by":\s*{\s*"count":\s*(\d+)/;
+      const match = htmlContent.match(jsonPattern);
+      if (match && match[1]) {
+        followersCount = parseInt(match[1], 10);
+        console.log(`✅ Found Instagram followers: ${followersCount}`);
+      }
+
+      // Pattern 2: Alternative JSON structure
+      if (!followersCount) {
+        const altPattern = /"followed_by_count":\s*(\d+)/;
+        const altMatch = htmlContent.match(altPattern);
+        if (altMatch && altMatch[1]) {
+          followersCount = parseInt(altMatch[1], 10);
+          console.log(`✅ Found Instagram followers (alt pattern): ${followersCount}`);
+        }
+      }
+
+      // Pattern 3: Meta tag content
+      if (!followersCount) {
+        const metaPattern = /"follower_count":\s*(\d+)/;
+        const metaMatch = htmlContent.match(metaPattern);
+        if (metaMatch && metaMatch[1]) {
+          followersCount = parseInt(metaMatch[1], 10);
+          console.log(`✅ Found Instagram followers (meta): ${followersCount}`);
+        }
+      }
+
+      if (followersCount && followersCount > 0) {
+        return followersCount;
+      }
+
+      console.log(`⚠️ Could not extract Instagram followers count`);
+      return null;
+    } catch (error) {
+      console.error(`❌ Failed to fetch Instagram followers:`, error);
+      return null;
+    }
+  };
+
+  // Fetch Facebook page followers by scraping
+  const fetchFacebookFollowers = async (pageName: string): Promise<number | null> => {
+    try {
+      const facebookUrl = `https://www.facebook.com/${pageName}`;
+      console.log(`📘 Fetching Facebook followers for ${pageName}`);
+      console.log(`🔗 Facebook URL: ${facebookUrl}`);
+
+      let htmlContent = '';
+
+      // Try multiple CORS proxies
+      const corsProxies = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(facebookUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(facebookUrl)}`,
+        `https://cors-anywhere.herokuapp.com/${facebookUrl}`
+      ];
+
+      for (const corsProxyUrl of corsProxies) {
+        try {
+          console.log(`📡 Trying CORS proxy...`);
+          const corsResponse = await fetch(corsProxyUrl, {
+            signal: AbortSignal.timeout(10000),
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+          });
+          if (corsResponse.ok) {
+            htmlContent = await corsResponse.text();
+            console.log(`✅ CORS proxy succeeded (length: ${htmlContent.length})`);
+            break;
+          }
+        } catch (corsError) {
+          console.log(`⚠️ CORS proxy failed, trying next...`);
+        }
+      }
+
+      if (!htmlContent) {
+        console.warn(`⚠️ Could not fetch Facebook page for ${pageName}`);
+        return null;
+      }
+
+      console.log(`📄 Searching for followers in HTML (length: ${htmlContent.length})`);
+
+      // Extract followers from Facebook JSON or meta data
+      let followersCount = null;
+
+      // Pattern 1: Look for follower count in JSON-LD
+      const patterns = [
+        /"followerCount":"(\d+)"/,
+        /"subscriber_count":"(\d+)"/,
+        /"fanCount":"(\d+)"/,
+        /(\d+[.,]\d+[KMB]?)\s*(?:people follow|followers?|likes?)/i,
+        /(\d+[KMB]?)\s*(?:people follow|followers?|likes?)/i
+      ];
+
+      for (const pattern of patterns) {
+        const match = htmlContent.match(pattern);
+        if (match && match[1]) {
+          let countStr = match[1];
+
+          // Handle K, M, B notation
+          const multiplier: Record<string, number> = {
+            'K': 1000,
+            'M': 1000000,
+            'B': 1000000000
+          };
+
+          const lastChar = countStr.charAt(countStr.length - 1).toUpperCase();
+          if (multiplier[lastChar]) {
+            const baseNum = parseFloat(countStr.slice(0, -1).replace(/[.,]/g, ''));
+            followersCount = Math.round(baseNum * multiplier[lastChar]);
+          } else {
+            followersCount = parseInt(countStr.replace(/[.,]/g, ''), 10);
+          }
+
+          console.log(`✅ Found Facebook followers using pattern: ${followersCount}`);
+          if (followersCount > 0) break;
+        }
+      }
+
+      if (followersCount && followersCount > 0) {
+        return followersCount;
+      }
+
+      console.log(`⚠️ Could not extract Facebook followers count`);
+      return null;
+    } catch (error) {
+      console.error(`❌ Failed to fetch Facebook followers:`, error);
+      return null;
+    }
+  };
+
   // Fetch YouTube subscribers directly from YouTube API
   const fetchYouTubeSubscribers = async (channelId: string): Promise<number | null> => {
     try {
@@ -784,9 +960,54 @@ const SocialConnection = () => {
           }
         }
 
-        // Instagram & Facebook - Reserved for future integration
-        else if (platformLower === 'instagram' || platformLower === 'facebook') {
-          console.log(`⏳ ${platform.platform} followers integration coming soon`);
+        // Instagram - Scrape followers from public profile
+        else if (platformLower === 'instagram') {
+          let username = platform.username;
+
+          if (!username && platform.url) {
+            const match = platform.url.match(/(?:instagram\.com\/)([^/?]+)/);
+            username = match ? match[1] : null;
+          }
+
+          if (username) {
+            const followers = await fetchInstagramFollowers(username);
+            if (followers !== null) {
+              enrichedPlatforms[i] = {
+                ...platform,
+                followers: followers,
+                source: 'instagram-scrape'
+              };
+            } else {
+              console.log(`⚠️ Could not fetch Instagram followers for @${username}`);
+            }
+          } else {
+            console.warn(`⚠️ Could not extract Instagram username from ${platform.url}`);
+          }
+        }
+
+        // Facebook - Scrape followers from public page
+        else if (platformLower === 'facebook') {
+          let pageName = platform.username;
+
+          if (!pageName && platform.url) {
+            const match = platform.url.match(/(?:facebook\.com\/)([^/?]+)/);
+            pageName = match ? match[1] : null;
+          }
+
+          if (pageName) {
+            const followers = await fetchFacebookFollowers(pageName);
+            if (followers !== null) {
+              enrichedPlatforms[i] = {
+                ...platform,
+                followers: followers,
+                source: 'facebook-scrape'
+              };
+            } else {
+              console.log(`⚠️ Could not fetch Facebook followers for ${pageName}`);
+            }
+          } else {
+            console.warn(`⚠️ Could not extract Facebook page name from ${platform.url}`);
+          }
         }
       } catch (error) {
         console.error(`Failed to fetch ${platform.platform} followers:`, error);
