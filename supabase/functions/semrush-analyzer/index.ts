@@ -171,8 +171,20 @@ serve(async (req) => {
 
     console.log(`✅ SEMrush analysis completed for ${parsedDomain}:`, result)
 
+    // Include debug info in response temporarily
     return new Response(
-      JSON.stringify({ success: true, result }),
+      JSON.stringify({
+        success: true,
+        result,
+        debug: {
+          parsedDomain,
+          hasOverviewData: overviewData.organic_keywords > 0 || overviewData.organic_traffic > 0,
+          hasBacklinksData: backlinksData.backlinks_count > 0 || backlinksData.referring_domains > 0,
+          note: overviewData.organic_keywords === 0 && backlinksData.backlinks_count === 0
+            ? 'Domain not found in SEMrush database - this is normal for small local businesses'
+            : 'SEMrush data available'
+        }
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200

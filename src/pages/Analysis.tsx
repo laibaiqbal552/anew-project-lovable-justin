@@ -297,6 +297,15 @@ const Analysis = () => {
       }
 
       console.log('✅ SEMrush analysis successful:', data.result);
+
+      // Show debug info if available
+      if (data.debug) {
+        console.log('🔍 SEMrush Debug Info:', data.debug);
+        if (data.debug.note) {
+          console.log('📌 Note:', data.debug.note);
+        }
+      }
+
       return data.result;
 
     } catch (error) {

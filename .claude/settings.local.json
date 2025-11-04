@@ -32,7 +32,8 @@
       "Bash(node test-business-search.js:*)",
       "Bash(git push:*)",
       "Bash(node test-semrush-direct.js:*)",
-      "Bash(node test-semrush-direct.cjs:*)"
+      "Bash(node test-semrush-direct.cjs:*)",
+      "WebFetch(domain:supabase.com)"
     ],
     "deny": [],
     "ask": []
