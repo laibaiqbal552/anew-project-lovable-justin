@@ -1741,8 +1741,50 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
-                    {/* Domain Authority */}
+                  {(() => {
+                    // Check if SEMrush data is unavailable (all zeros)
+                    const hasData = (
+                      (report.analysis_data.seo.domain_authority || 0) > 0 ||
+                      (report.analysis_data.seo.organic_keywords || 0) > 0 ||
+                      (report.analysis_data.seo.organic_traffic || 0) > 0 ||
+                      (report.analysis_data.seo.backlinks_count || 0) > 0 ||
+                      (report.analysis_data.seo.referring_domains || 0) > 0
+                    );
+
+                    if (!hasData) {
+                      // Show friendly message when no data is available
+                      return (
+                        <div className="p-8 text-center">
+                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+                            <TrendingUp className="h-8 w-8 text-blue-600" />
+                          </div>
+                          <h3 className="text-lg font-semibold mb-2 text-gray-900">
+                            SEO Data Not Yet Available
+                          </h3>
+                          <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                            This domain isn't currently tracked in SEMrush's database.
+                            This is normal for newer websites or small local businesses that
+                            don't yet have significant organic search presence.
+                          </p>
+                          <div className="bg-blue-50 rounded-lg p-4 max-w-md mx-auto">
+                            <p className="text-sm text-blue-900 font-medium mb-2">
+                              To improve SEO visibility:
+                            </p>
+                            <ul className="text-xs text-blue-800 space-y-1 text-left">
+                              <li>• Build high-quality backlinks from relevant websites</li>
+                              <li>• Create valuable content optimized for search engines</li>
+                              <li>• Increase organic traffic through SEO best practices</li>
+                              <li>• Be patient - it takes time to build domain authority</li>
+                            </ul>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Show actual data when available
+                    return (
+                      <div className="space-y-6">
+                        {/* Domain Authority */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-gray-900">
@@ -1910,7 +1952,9 @@ const Dashboard = () => {
                         </li>
                       </ul>
                     </div>
-                  </div>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             )}
