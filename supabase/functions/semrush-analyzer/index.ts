@@ -40,8 +40,10 @@ serve(async (req) => {
       throw new Error('SEMRUSH_API_KEY environment variable not set')
     }
 
-    // Parse domain from URL if needed
-    const parsedDomain = domain.replace(/^https?:\/\//, '').split('/')[0]
+    // Parse domain from URL if needed and remove www. prefix
+    let parsedDomain = domain.replace(/^https?:\/\//, '').split('/')[0]
+    // Remove www. prefix as SEMrush typically indexes root domains
+    parsedDomain = parsedDomain.replace(/^www\./, '')
 
     // 1. Get Domain Overview (organic keywords, traffic, etc.)
     console.log(`Fetching SEMrush Domain Overview for: ${parsedDomain}`)
