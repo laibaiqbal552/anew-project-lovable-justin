@@ -56,7 +56,12 @@ serve(async (req) => {
 
     if (overviewRes.ok) {
       const overviewText = await overviewRes.text()
+      console.log(`📊 SEMrush Overview Response (first 500 chars): ${overviewText.substring(0, 500)}`)
       const lines = overviewText.trim().split('\n')
+      console.log(`📊 Response has ${lines.length} lines, first line: ${lines[0]}`)
+      if (lines.length > 1) {
+        console.log(`📊 Second line: ${lines[1]}`)
+      }
       if (lines.length > 1 && lines[1] !== 'Nothing found.') {
         const values = lines[1].split(';')
         // Domain Overview format: Domain;Organic Keywords;Organic Traffic;Organic Cost;...
@@ -67,10 +72,12 @@ serve(async (req) => {
         }
         console.log(`SEMrush Overview: Keywords=${overviewData.organic_keywords}, Traffic=${overviewData.organic_traffic}`)
       } else {
-        console.log('No overview data found for domain')
+        console.log('⚠️ No overview data found for domain - SEMrush returned "Nothing found" or empty response')
       }
     } else {
-      console.error(`SEMrush Overview API error: ${overviewRes.status}`)
+      console.error(`❌ SEMrush Overview API error: ${overviewRes.status} ${overviewRes.statusText}`)
+      const errorText = await overviewRes.text()
+      console.error(`❌ Error response: ${errorText.substring(0, 200)}`)
     }
 
     // 2. Get Backlinks Overview (backlinks, referring domains, authority)
@@ -86,6 +93,7 @@ serve(async (req) => {
 
     if (backlinksRes.ok) {
       const backlinksText = await backlinksRes.text()
+      console.log(`🔗 SEMrush Backlinks Response (first 500 chars): ${backlinksText.substring(0, 500)}`)
       const lines = backlinksText.trim().split('\n')
       if (lines.length > 1 && lines[1] !== 'Nothing found.') {
         const values = lines[1].split(';')
@@ -97,10 +105,12 @@ serve(async (req) => {
         }
         console.log(`SEMrush Backlinks: Total=${backlinksData.backlinks_count}, Domains=${backlinksData.referring_domains}, Authority=${backlinksData.authority_score}`)
       } else {
-        console.log('No backlinks data found for domain')
+        console.log('⚠️ No backlinks data found for domain - SEMrush returned "Nothing found" or empty response')
       }
     } else {
-      console.error(`SEMrush Backlinks API error: ${backlinksRes.status}`)
+      console.error(`❌ SEMrush Backlinks API error: ${backlinksRes.status} ${backlinksRes.statusText}`)
+      const errorText = await backlinksRes.text()
+      console.error(`❌ Error response: ${errorText.substring(0, 200)}`)
     }
 
     // Calculate SEO Health Score

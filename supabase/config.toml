@@ -31,6 +31,12 @@ verify_jwt = false
 [functions.places-autocomplete]
 verify_jwt = false
 
+[functions.semrush-analyzer]
+verify_jwt = false
+
+[functions.pagespeed-analyzer]
+verify_jwt = false
+
 [functions.analyze-website]
 verify_jwt = false
 

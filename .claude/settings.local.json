@@ -30,7 +30,9 @@
       "Bash(node test-places-autocomplete.js:*)",
       "Bash(node test-google-reviews-fix.js:*)",
       "Bash(node test-business-search.js:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(node test-semrush-direct.js:*)",
+      "Bash(node test-semrush-direct.cjs:*)"
     ],
     "deny": [],
     "ask": []
