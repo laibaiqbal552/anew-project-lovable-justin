@@ -960,54 +960,18 @@ const SocialConnection = () => {
           }
         }
 
-        // Instagram - Scrape followers from public profile
-        else if (platformLower === 'instagram') {
-          let username = platform.username;
-
-          if (!username && platform.url) {
-            const match = platform.url.match(/(?:instagram\.com\/)([^/?]+)/);
-            username = match ? match[1] : null;
-          }
-
-          if (username) {
-            const followers = await fetchInstagramFollowers(username);
-            if (followers !== null) {
-              enrichedPlatforms[i] = {
-                ...platform,
-                followers: followers,
-                source: 'instagram-scrape'
-              };
-            } else {
-              console.log(`⚠️ Could not fetch Instagram followers for @${username}`);
-            }
-          } else {
-            console.warn(`⚠️ Could not extract Instagram username from ${platform.url}`);
-          }
-        }
-
-        // Facebook - Scrape followers from public page
-        else if (platformLower === 'facebook') {
-          let pageName = platform.username;
-
-          if (!pageName && platform.url) {
-            const match = platform.url.match(/(?:facebook\.com\/)([^/?]+)/);
-            pageName = match ? match[1] : null;
-          }
-
-          if (pageName) {
-            const followers = await fetchFacebookFollowers(pageName);
-            if (followers !== null) {
-              enrichedPlatforms[i] = {
-                ...platform,
-                followers: followers,
-                source: 'facebook-scrape'
-              };
-            } else {
-              console.log(`⚠️ Could not fetch Facebook followers for ${pageName}`);
-            }
-          } else {
-            console.warn(`⚠️ Could not extract Facebook page name from ${platform.url}`);
-          }
+        // Instagram & Facebook - Show detected profiles without follower counts
+        // These platforms have strong anti-scraping measures and require login
+        else if (platformLower === 'instagram' || platformLower === 'facebook') {
+          console.log(`📱 ${platform.platform} profile detected: ${platform.url}`);
+          console.log(`ℹ️ ${platform.platform} requires authentication - follower count unavailable via scraping`);
+          // Keep the platform but mark it as detected without followers
+          enrichedPlatforms[i] = {
+            ...platform,
+            followers: null,
+            source: 'detected-no-auth',
+            note: 'Follower count unavailable - requires authentication'
+          };
         }
       } catch (error) {
         console.error(`Failed to fetch ${platform.platform} followers:`, error);
