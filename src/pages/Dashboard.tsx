@@ -2378,10 +2378,6 @@ const Dashboard = () => {
                               </div>
                               {platform.source && (
                                 <Badge variant="outline" className="text-xs">
-                                  {platform.source === "twitter-api" && "🐦"}
-                                  {platform.source === "youtube-api" && "📺"}
-                                  {platform.source === "scrapapi" && "🔍"}
-                                  {platform.source === "scrapingdog" && "🐕"}
                                   {platform.source &&
                                     ![
                                       "twitter-api",
@@ -2410,11 +2406,13 @@ const Dashboard = () => {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-lg text-gray-900">
-                        {report.data_quality?.social_api &&
-                        typeof report.analysis_data?.social?.total_followers ===
-                          "number"
-                          ? report.analysis_data.social.total_followers.toLocaleString()
-                          : "—"}
+                        {(
+                          (report.analysis_data?.social?.detected_platforms ??
+                            []).reduce(
+                            (sum: number, p: any) => sum + (p?.followers ?? 0),
+                            0
+                          )
+                        ).toLocaleString()}{" "}
                       </span>
                       {report.data_quality?.social_api ? (
                         <Badge
@@ -2428,7 +2426,7 @@ const Dashboard = () => {
                           variant="outline"
                           className="text-xs bg-gray-100 text-gray-600 border-gray-300"
                         >
-                          AI‑sourced
+                          Estimated
                         </Badge>
                       )}
                     </div>
