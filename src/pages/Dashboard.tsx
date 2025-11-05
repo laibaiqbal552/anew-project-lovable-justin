@@ -394,10 +394,10 @@ const Dashboard = () => {
           const guestResults = localStorage.getItem("guestAnalysisResults");
           if (guestResults) {
             reportData = JSON.parse(guestResults);
-            console.log('🔍 Dashboard: Loaded guest report data:', {
+            console.log("🔍 Dashboard: Loaded guest report data:", {
               hasAnalysisData: !!reportData.analysis_data,
               hasSeo: !!reportData.analysis_data?.seo,
-              seoData: reportData.analysis_data?.seo
+              seoData: reportData.analysis_data?.seo,
             });
           } else {
             console.log(
@@ -1721,12 +1721,12 @@ const Dashboard = () => {
             {/* SEMrush SEO Metrics */}
             {(() => {
               const shouldShow = report.analysis_data?.seo;
-              console.log('🔍 Dashboard: SEMrush section render check:', {
+              console.log("🔍 Dashboard: SEMrush section render check:", {
                 shouldShow,
                 hasReport: !!report,
                 hasAnalysisData: !!report?.analysis_data,
                 hasSeo: !!report?.analysis_data?.seo,
-                seoData: report?.analysis_data?.seo
+                seoData: report?.analysis_data?.seo,
               });
               return shouldShow;
             })() && (
@@ -1743,13 +1743,12 @@ const Dashboard = () => {
                 <CardContent>
                   {(() => {
                     // Check if SEMrush data is unavailable (all zeros)
-                    const hasData = (
+                    const hasData =
                       (report.analysis_data.seo.domain_authority || 0) > 0 ||
                       (report.analysis_data.seo.organic_keywords || 0) > 0 ||
                       (report.analysis_data.seo.organic_traffic || 0) > 0 ||
                       (report.analysis_data.seo.backlinks_count || 0) > 0 ||
-                      (report.analysis_data.seo.referring_domains || 0) > 0
-                    );
+                      (report.analysis_data.seo.referring_domains || 0) > 0;
 
                     if (!hasData) {
                       // Show friendly message when no data is available
@@ -1762,19 +1761,32 @@ const Dashboard = () => {
                             SEO Data Not Yet Available
                           </h3>
                           <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                            This domain isn't currently tracked in SEMrush's database.
-                            This is normal for newer websites or small local businesses that
-                            don't yet have significant organic search presence.
+                            This domain isn't currently tracked in SEMrush's
+                            database. This is normal for newer websites or small
+                            local businesses that don't yet have significant
+                            organic search presence.
                           </p>
                           <div className="bg-blue-50 rounded-lg p-4 max-w-md mx-auto">
                             <p className="text-sm text-blue-900 font-medium mb-2">
                               To improve SEO visibility:
                             </p>
                             <ul className="text-xs text-blue-800 space-y-1 text-left">
-                              <li>• Build high-quality backlinks from relevant websites</li>
-                              <li>• Create valuable content optimized for search engines</li>
-                              <li>• Increase organic traffic through SEO best practices</li>
-                              <li>• Be patient - it takes time to build domain authority</li>
+                              <li>
+                                • Build high-quality backlinks from relevant
+                                websites
+                              </li>
+                              <li>
+                                • Create valuable content optimized for search
+                                engines
+                              </li>
+                              <li>
+                                • Increase organic traffic through SEO best
+                                practices
+                              </li>
+                              <li>
+                                • Be patient - it takes time to build domain
+                                authority
+                              </li>
                             </ul>
                           </div>
                         </div>
@@ -1785,7 +1797,7 @@ const Dashboard = () => {
                     return (
                       <div className="space-y-6">
                         {/* Domain Authority */}
-                    {/* <div className="space-y-3">
+                        {/* <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-gray-900">
                           Domain Authority
@@ -1821,41 +1833,41 @@ const Dashboard = () => {
                       </p>
                     </div> */}
 
-                    {/* Organic Keywords */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">
-                          Organic Keywords Ranking
-                        </h4>
-                        <span className="text-lg font-bold text-gray-900">
-                          {report.analysis_data.seo.organic_keywords?.toLocaleString() ||
-                            0}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600">
-                        Number of keywords your domain ranks for in search
-                        results
-                      </p>
-                    </div>
+                        {/* Organic Keywords */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-gray-900">
+                              Organic Keywords Ranking
+                            </h4>
+                            <span className="text-lg font-bold text-gray-900">
+                              {report.analysis_data.seo.organic_keywords?.toLocaleString() ||
+                                0}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            Number of keywords your domain ranks for in search
+                            results
+                          </p>
+                        </div>
 
-                    {/* Organic Traffic */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">
-                          Estimated Monthly Organic Traffic
-                        </h4>
-                        <span className="text-lg font-bold text-gray-900">
-                          {report.analysis_data.seo.organic_traffic?.toLocaleString() ||
-                            0}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600">
-                        Estimated visitors from organic search per month
-                      </p>
-                    </div>
+                        {/* Organic Traffic */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-gray-900">
+                              Estimated Monthly Organic Traffic
+                            </h4>
+                            <span className="text-lg font-bold text-gray-900">
+                              {report.analysis_data.seo.organic_traffic?.toLocaleString() ||
+                                0}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            Estimated visitors from organic search per month
+                          </p>
+                        </div>
 
-                    {/* Backlinks */}
-                    {/* <div className="space-y-3">
+                        {/* Backlinks */}
+                        {/* <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-gray-900">
                           Total Backlinks
@@ -1870,8 +1882,8 @@ const Dashboard = () => {
                       </p>
                     </div> */}
 
-                    {/* Referring Domains */}
-                    {/* <div className="space-y-3">
+                        {/* Referring Domains */}
+                        {/* <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-gray-900">
                           Referring Domains
@@ -1886,72 +1898,45 @@ const Dashboard = () => {
                       </p>
                     </div> */}
 
-                    {/* SEO Health Score */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900">
-                          SEO Health Score
-                        </h4>
-                        <div className="flex items-center gap-3">
-                          <div className="w-24 bg-gray-200 rounded-full h-3">
-                            <div
-                              className={`h-3 rounded-full transition-all ${
-                                (report.analysis_data.seo.seo_health_score ||
-                                  0) >= 80
-                                  ? "bg-green-500"
-                                  : (report.analysis_data.seo
-                                      .seo_health_score || 0) >= 50
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
-                              }`}
-                              style={{
-                                width: `${Math.min(
-                                  report.analysis_data.seo.seo_health_score ||
-                                    0,
-                                  100
-                                )}%`,
-                              }}
-                            ></div>
+                        {/* SEO Health Score */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-gray-900">
+                              SEO Health Score
+                            </h4>
+                            <div className="flex items-center gap-3">
+                              <div className="w-24 bg-gray-200 rounded-full h-3">
+                                <div
+                                  className={`h-3 rounded-full transition-all ${
+                                    (report.analysis_data.seo
+                                      .seo_health_score || 0) >= 80
+                                      ? "bg-green-500"
+                                      : (report.analysis_data.seo
+                                          .seo_health_score || 0) >= 50
+                                      ? "bg-yellow-500"
+                                      : "bg-red-500"
+                                  }`}
+                                  style={{
+                                    width: `${Math.min(
+                                      report.analysis_data.seo
+                                        .seo_health_score || 0,
+                                      100
+                                    )}%`,
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="text-lg font-bold text-gray-900">
+                                {report.analysis_data.seo.seo_health_score || 0}
+                                /100
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-lg font-bold text-gray-900">
-                            {report.analysis_data.seo.seo_health_score || 0}/100
-                          </span>
+                          <p className="text-xs text-gray-600">
+                            Overall SEO health based on all metrics
+                          </p>
                         </div>
-                      </div>
-                      <p className="text-xs text-gray-600">
-                        Overall SEO health based on all metrics
-                      </p>
-                    </div>
 
-                    {/* Key Findings */}
-                    <div className="mt-6 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                      <p className="text-sm text-green-900 font-medium mb-2">
-                        SEO Insights:
-                      </p>
-                      <ul className="text-xs text-green-800 space-y-1">
-                        <li>
-                          • Domain Authority:{" "}
-                          {(report.analysis_data.seo.domain_authority || 0) >=
-                          50
-                            ? "Strong domain authority"
-                            : "Room for improvement in domain authority"}
-                        </li>
-                        <li>
-                          • Organic Visibility:{" "}
-                          {(report.analysis_data.seo.organic_keywords || 0) >
-                          100
-                            ? "Good keyword visibility"
-                            : "Consider expanding keyword targeting"}
-                        </li>
-                        <li>
-                          • Backlink Profile:{" "}
-                          {(report.analysis_data.seo.referring_domains || 0) >
-                          50
-                            ? "Strong backlink profile"
-                            : "Build more high-quality backlinks"}
-                        </li>
-                      </ul>
-                    </div>
+                        {/* Key Findings */}
                       </div>
                     );
                   })()}
