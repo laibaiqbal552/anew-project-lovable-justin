@@ -2381,11 +2381,13 @@ const Dashboard = () => {
                                   {platform.source === "twitter-api" && "🐦"}
                                   {platform.source === "youtube-api" && "📺"}
                                   {platform.source === "scrapapi" && "🔍"}
+                                  {platform.source === "scrapingdog" && "🐕"}
                                   {platform.source &&
                                     ![
                                       "twitter-api",
                                       "youtube-api",
                                       "scrapapi",
+                                      "scrapingdog",
                                     ].includes(platform.source) &&
                                     "✓"}
                                 </Badge>
